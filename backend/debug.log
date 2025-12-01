@@ -1,0 +1,19 @@
+2025-11-30T14:42:58.425Z - BI Request Received
+2025-11-30T14:42:58.434Z - BI Error: 
+AggregateError: 
+    at D:\gravity\pulse-kart\backend\node_modules\pg-pool\index.js:45:11
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Promise.all (index 1)
+
+2025-11-30T15:18:56.203Z - BI Request Received
+2025-11-30T15:18:56.281Z - BI Data Fetched Successfully
+2025-11-30T15:18:56.294Z - BI Request Received
+2025-11-30T15:18:56.300Z - BI Data Fetched Successfully
+2025-11-30T15:29:59.181Z - BI Request Received
+2025-11-30T15:29:59.263Z - BI Data Fetched Successfully
+2025-11-30T15:29:59.271Z - BI Request Received
+2025-11-30T15:29:59.278Z - BI Data Fetched Successfully
+2025-11-30T15:34:53.965Z - BI Request Received
+2025-11-30T15:34:54.038Z - BI Data Fetched Successfully
+2025-11-30T15:34:54.047Z - BI Request Received
+2025-11-30T15:34:54.053Z - BI Data Fetched Successfully

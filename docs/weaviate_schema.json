@@ -1,0 +1,87 @@
+{
+    "classes": [
+        {
+            "class": "MedicalDocument",
+            "description": "A medical document (research paper, guideline, etc.)",
+            "vectorizer": "text2vec-transformers",
+            "moduleConfig": {
+                "text2vec-transformers": {
+                    "poolingStrategy": "masked_mean",
+                    "vectorizeClassName": false
+                }
+            },
+            "properties": [
+                {
+                    "name": "content",
+                    "dataType": [
+                        "text"
+                    ],
+                    "description": "The text content of the document chunk"
+                },
+                {
+                    "name": "source_url",
+                    "dataType": [
+                        "string"
+                    ],
+                    "description": "URL of the source"
+                },
+                {
+                    "name": "doc_type",
+                    "dataType": [
+                        "string"
+                    ],
+                    "description": "Type of document: guideline, pharma, research"
+                },
+                {
+                    "name": "publish_date",
+                    "dataType": [
+                        "date"
+                    ],
+                    "description": "Date of publication"
+                },
+                {
+                    "name": "credibility_score",
+                    "dataType": [
+                        "number"
+                    ],
+                    "description": "Score from 0 to 1"
+                }
+            ]
+        },
+        {
+            "class": "Product",
+            "description": "A product in the catalog",
+            "vectorizer": "text2vec-transformers",
+            "properties": [
+                {
+                    "name": "title",
+                    "dataType": [
+                        "text"
+                    ],
+                    "description": "Product title"
+                },
+                {
+                    "name": "description",
+                    "dataType": [
+                        "text"
+                    ],
+                    "description": "Product description"
+                },
+                {
+                    "name": "category",
+                    "dataType": [
+                        "string"
+                    ],
+                    "description": "Product category"
+                },
+                {
+                    "name": "price",
+                    "dataType": [
+                        "number"
+                    ],
+                    "description": "Product price"
+                }
+            ]
+        }
+    ]
+}

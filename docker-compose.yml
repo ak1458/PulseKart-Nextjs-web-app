@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Primary Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: pulse_postgres
+    environment:
+      POSTGRES_USER: pulse_user
+      POSTGRES_PASSWORD: pulse_password
+      POSTGRES_DB: pulse_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pulse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: pulse_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pulse_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Weaviate - Vector Database
+  weaviate:
+    image: semitechnologies/weaviate:1.24.1
+    container_name: pulse_weaviate
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none' # We'll use local embeddings or OpenAI
+      ENABLE_MODULES: 'text2vec-transformers' # Optional: enable if using built-in
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - pulse_network
+
+  # MinIO - Object Storage (S3 Compatible)
+  minio:
+    image: minio/minio
+    container_name: pulse_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: pulse_minio
+      MINIO_ROOT_PASSWORD: pulse_minio_password
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - pulse_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  weaviate_data:
+  minio_data:
+
+networks:
+  pulse_network:
+    driver: bridge

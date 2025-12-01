@@ -1,0 +1,228 @@
+openapi: 3.0.0
+info:
+  title: PulseKart API
+  version: 1.0.0
+  description: API for PulseKart Pharmacy Dashboard & Storefront
+
+servers:
+  - url: http://localhost:8000/v1
+    description: Local Development Server
+
+paths:
+  # --- Auth ---
+  /auth/register:
+    post:
+      summary: Register new user
+      tags: [Auth]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+                name: { type: string }
+  /auth/login:
+    post:
+      summary: Login user
+      tags: [Auth]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+
+  # --- Users ---
+  /users/me:
+    get:
+      summary: Get current user profile
+      tags: [User]
+  /users/{id}/addresses:
+    get:
+      summary: Get user addresses
+      tags: [User]
+    post:
+      summary: Add new address
+      tags: [User]
+
+  # --- Products ---
+  /products:
+    get:
+      summary: List products with filters
+      tags: [Products]
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+  /products/{slug}:
+    get:
+      summary: Get product details
+      tags: [Products]
+
+  # --- Cart & Checkout ---
+  /cart:
+    get:
+      summary: Get user cart
+      tags: [Cart]
+  /cart/items:
+    post:
+      summary: Add item to cart
+      tags: [Cart]
+  /checkout/create:
+    post:
+      summary: Create order & initialize payment
+      tags: [Checkout]
+  /checkout/complete:
+    post:
+      summary: Verify payment & complete order
+      tags: [Checkout]
+
+  # --- Orders ---
+  /orders:
+    get:
+      summary: List user orders
+      tags: [Orders]
+  /orders/{id}:
+    get:
+      summary: Get order details
+      tags: [Orders]
+  /orders/{id}/track:
+    post:
+      summary: Get tracking info
+      tags: [Orders]
+
+  # --- Prescriptions ---
+  /prescriptions/upload:
+    post:
+      summary: Upload prescription file
+      tags: [Prescriptions]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+  /prescriptions:
+    get:
+      summary: List user prescriptions
+      tags: [Prescriptions]
+
+  # --- Consultation ---
+  /consult/session:
+    post:
+      summary: Start consultation session
+      tags: [Consultation]
+  /consult/message:
+    post:
+      summary: Send message to bot/doctor
+      tags: [Consultation]
+
+  # --- Pharmacist ---
+  /pharmacist/queue:
+    get:
+      summary: Get pending prescriptions
+      tags: [Pharmacist]
+  /pharmacist/{id}/approve:
+    post:
+      summary: Approve prescription
+      tags: [Pharmacist]
+  /pharmacist/{id}/reject:
+    post:
+      summary: Reject prescription
+      tags: [Pharmacist]
+
+  # --- Admin ---
+  /admin/orders:
+    get:
+      summary: List all orders (admin)
+      tags: [Admin]
+  /admin/orders/{id}/status:
+    post:
+      summary: Update order status
+      tags: [Admin]
+  /admin/products:
+    get:
+      summary: List all products (admin)
+      tags: [Admin]
+    post:
+      summary: Create product
+      tags: [Admin]
+  /admin/inventory/adjust:
+    post:
+      summary: Adjust stock
+      tags: [Admin]
+  /admin/coupons:
+    get:
+      summary: List coupons
+      tags: [Admin]
+    post:
+      summary: Create coupon
+      tags: [Admin]
+  /admin/reports/sales:
+    get:
+      summary: Get sales report
+      tags: [Admin]
+  /admin/audit-logs:
+    get:
+      summary: Get audit logs
+      tags: [Admin]
+
+  # --- HR & Payroll ---
+  /admin/employees:
+    get:
+      summary: List employees
+      tags: [HR]
+    post:
+      summary: Create employee
+      tags: [HR]
+  /admin/payslips/generate:
+    post:
+      summary: Generate payroll preview
+      tags: [HR]
+  /admin/attendance/import:
+    post:
+      summary: Import biometric data
+      tags: [HR]
+  /admin/leave/{id}/approve:
+    post:
+      summary: Approve leave request
+      tags: [HR]
+  /admin/payouts/create-batch:
+    post:
+      summary: Create bulk payout batch
+      tags: [HR]
+
+  # --- AI Admin Worker ---
+  /admin/ai/prompt:
+    post:
+      summary: Send prompt to AI (Suggest/Dry-run)
+      tags: [AI]
+  /admin/ai/execute:
+    post:
+      summary: Execute AI action
+      tags: [AI]
+  /admin/ai/history:
+    get:
+      summary: Get AI interaction history
+      tags: [AI]
+  /admin/ai/approve/{id}:
+    post:
+      summary: Approve pending AI action
+      tags: [AI]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
