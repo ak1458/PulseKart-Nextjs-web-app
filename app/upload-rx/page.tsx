@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload, Camera, FileText, CheckCircle } from "lucide-react";
+import { Upload, Camera, FileText, CheckCircle } from "@/lib/icons";
 
 export default function UploadRxPage() {
     return (
@@ -53,3 +53,6 @@ export default function UploadRxPage() {
         </div>
     );
 }
+
+
+

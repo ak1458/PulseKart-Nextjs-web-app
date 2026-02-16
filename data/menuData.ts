@@ -1,4 +1,4 @@
-import { Pill, Baby, Heart, Activity, Sparkles, Zap } from 'lucide-react';
+import { Pill, Activity, Sparkles, IconBabyCare } from '@/lib/icons';
 
 export type SubCategory = {
     id: string;
@@ -51,13 +51,7 @@ export const MENU_DATA: MenuCategory[] = [
                 ]
             }
         ],
-        featured: {
-            name: 'Dolo 650mg (15 Tabs)',
-            image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
-            price: 30,
-            slug: 'dolo-650',
-            inStock: true
-        }
+        // featured: fetched from backend when available
     },
     {
         id: 'personal',
@@ -82,19 +76,13 @@ export const MENU_DATA: MenuCategory[] = [
                 ]
             }
         ],
-        featured: {
-            name: 'Cetaphil Cleanser',
-            image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=400&fit=crop',
-            price: 450,
-            slug: 'cetaphil',
-            inStock: true
-        }
+        // featured: fetched from backend when available
     },
     {
         id: 'baby',
         name: 'Baby Care',
         slug: 'baby-care',
-        icon: Baby,
+        icon: IconBabyCare,
         columns: [
             {
                 title: 'Essentials',
@@ -105,13 +93,7 @@ export const MENU_DATA: MenuCategory[] = [
                 ]
             }
         ],
-        featured: {
-            name: 'Pampers Active (L)',
-            image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&h=400&fit=crop',
-            price: 399,
-            slug: 'pampers',
-            inStock: true
-        }
+        // featured: fetched from backend when available
     },
     {
         id: 'devices',
@@ -128,12 +110,6 @@ export const MENU_DATA: MenuCategory[] = [
                 ]
             }
         ],
-        featured: {
-            name: 'Omron BP Monitor',
-            image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=400&fit=crop',
-            price: 1599,
-            slug: 'omron-bp',
-            inStock: false
-        }
+        // featured: fetched from backend when available
     }
 ];

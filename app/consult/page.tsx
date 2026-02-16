@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, AlertTriangle, ShieldCheck, Phone, MapPin, Clock, Stethoscope } from 'lucide-react';
+import { Send, Bot, User, AlertTriangle, ShieldCheck, Phone, MapPin, Clock, Stethoscope } from '@/lib/icons';
 import Link from 'next/link';
 
 type Message = {
@@ -24,13 +24,7 @@ type IntakeData = {
 export default function ConsultPage() {
     const [step, setStep] = useState<'disclaimer' | 'intake' | 'chat'>('disclaimer');
     const [intakeData, setIntakeData] = useState<IntakeData>({ age: '', sex: '', location: '', duration: '' });
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: '1',
-            role: 'bot',
-            content: 'Hello! I am your PulseKart medical assistant. I have reviewed your intake details. How can I help you today?',
-        }
-    ]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -61,44 +55,14 @@ export default function ConsultPage() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
 
-        // Mock RAG & Triage Logic
-        setTimeout(() => {
-            const lowerInput = input.toLowerCase();
-            const isRedFlag = lowerInput.includes('chest pain') || lowerInput.includes('breathing') || lowerInput.includes('unconscious');
-            const isChronic = intakeData.duration.includes('week') || intakeData.duration.includes('month') || lowerInput.includes('diabetes');
-
-            if (isRedFlag) {
-                const botMsg: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'bot',
-                    content: "⚠️ EMERGENCY ALERT: Your symptoms suggest a potential medical emergency. Please visit the nearest hospital immediately or call an ambulance.",
-                    isEmergency: true
-                };
-                setMessages(prev => [...prev, botMsg]);
-            } else if (isChronic) {
-                const botMsg: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'bot',
-                    content: "Your symptoms appear to be chronic or require specialist attention. I strongly recommend consulting a doctor for a detailed examination.",
-                    isReferral: true,
-                    confidence: 0.9
-                };
-                setMessages(prev => [...prev, botMsg]);
-            } else {
-                const botMsg: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'bot',
-                    content: "Based on your description and intake details, this could be a mild viral infection or seasonal allergy. Rest and hydration are recommended. Here are some common over-the-counter options.",
-                    citations: ['CDC Guidelines: Viral Management', 'NHS: Common Cold'],
-                    confidence: 0.85
-                };
-                setMessages(prev => [...prev, botMsg]);
-            }
-        }, 1000);
+        // TODO: Implement real API call to backend for AI consultation
+        // eslint-disable-next-line no-console
+        console.log('User message sent:', input);
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-4 h-[calc(100vh-80px)] flex flex-col">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto w-full pt-6 pb-20 min-h-[calc(100vh-var(--site-top-offset))] flex flex-col">
 
             {/* Step 1: Disclaimer Modal */}
             {step === 'disclaimer' && (
@@ -305,6 +269,8 @@ export default function ConsultPage() {
                     </div>
                 </>
             )}
+            </div>
         </div>
     );
 }
+

@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Search, X, ShoppingCart, ArrowRight } from 'lucide-react';
-import { MENU_DATA, MenuCategory } from '@/data/menuData';
+import { ChevronDown, ChevronRight, Search, X, ShoppingCart, ArrowRight } from '@/lib/icons';
+import { MENU_DATA } from '@/data/menuData';
 
 // --- Types ---
 type MegaMenuProps = {
@@ -91,6 +91,9 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
 
     // --- Render Desktop ---
     if (mode === 'desktop') {
+        const activeData = MENU_DATA.find(c => c.id === activeCategory);
+        const hasFeatured = Boolean(activeData?.featured);
+
         return (
             <div
                 className="relative"
@@ -107,7 +110,7 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
                             onMouseEnter={() => handleMouseEnter(cat.id)}
                         >
                             <button
-                                className={`flex items-center gap-1 py-4 font-medium transition-colors ${activeCategory === cat.id ? 'text-[#14b8a6]' : 'text-gray-600 hover:text-[#14b8a6]'
+                                className={`flex items-center gap-1 py-4 font-medium transition-colors text-sm ${activeCategory === cat.id ? 'text-teal-300' : 'text-white hover:text-teal-200'
                                     }`}
                                 aria-expanded={activeCategory === cat.id}
                                 aria-controls={`menu-${cat.id}`}
@@ -129,26 +132,26 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
                             animate="visible"
                             exit="exit"
                             variants={desktopVariants}
-                            className="absolute top-[calc(100%-1rem)] left-0 w-[800px] bg-white rounded-xl shadow-xl border border-gray-100 p-6 pt-10 z-[60] grid grid-cols-12 gap-8"
-                            style={{ translateX: '-20%' }} // Center align adjustment
+                            className="absolute top-[calc(100%-0.5rem)] left-0 w-[900px] rounded-3xl p-8 z-[60] grid grid-cols-12 gap-8 border border-white/15 shadow-[0_30px_70px_rgba(0,0,0,0.6)] bg-gradient-to-br from-[#0b1220]/95 via-[#0b1220]/92 to-[#0b1220]/88 backdrop-blur-2xl"
+                            style={{ translateX: '-15%' }} // Center align adjustment
                             onMouseEnter={() => {
                                 if (hoverTimeout) clearTimeout(hoverTimeout);
                             }}
                         >
                             {/* Columns */}
-                            <div className="col-span-8 grid grid-cols-2 gap-8">
-                                {MENU_DATA.find(c => c.id === activeCategory)?.columns.map((col, idx) => (
+                            <div className={`${hasFeatured ? 'col-span-8' : 'col-span-12'} grid grid-cols-2 gap-8`}>
+                                {activeData?.columns.map((col, idx) => (
                                     <div key={idx}>
-                                        <h3 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide">{col.title}</h3>
-                                        <ul className="space-y-3">
+                                        <h3 className="font-bold text-white mb-4 text-xs uppercase tracking-widest opacity-70 border-b border-white/5 pb-2">{col.title}</h3>
+                                        <ul className="space-y-2">
                                             {col.items.map((item) => (
                                                 <li key={item.id}>
                                                     <button
-                                                        onClick={() => handleNavigate(MENU_DATA.find(c => c.id === activeCategory)!.slug, item.slug)}
-                                                        className="text-gray-600 hover:text-[#14b8a6] text-sm flex items-center gap-2 group w-full text-left"
+                                                        onClick={() => activeData && handleNavigate(activeData.slug, item.slug)}
+                                                        className="text-gray-400 hover:text-teal-300 text-sm flex items-center gap-3 group w-full text-left py-1"
                                                         role="menuitem"
                                                     >
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-[#14b8a6] transition-colors"></span>
+                                                        <span className="w-1 h-1 rounded-full bg-gray-600 group-hover:bg-teal-400 transition-all group-hover:scale-150"></span>
                                                         {item.name}
                                                     </button>
                                                 </li>
@@ -157,35 +160,36 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
                                     </div>
                                 ))}
                             </div>
-
                             {/* Featured Product */}
-                            <div className="col-span-4 bg-gray-50 rounded-lg p-4">
-                                {MENU_DATA.find(c => c.id === activeCategory)?.featured && (
-                                    <div className="group cursor-pointer">
-                                        <div className="relative overflow-hidden rounded-lg mb-3">
+                            {hasFeatured && activeData?.featured && (
+                                <div className="col-span-4 bg-white/5 rounded-2xl p-5 border border-white/5 relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                    <div className="cursor-pointer relative z-10">
+                                        <div className="relative overflow-hidden rounded-xl mb-4 bg-black/20">
                                             <img
-                                                src={MENU_DATA.find(c => c.id === activeCategory)?.featured?.image}
+                                                src={activeData.featured.image}
                                                 alt="Featured"
-                                                className="w-full h-40 object-cover transform group-hover:scale-105 transition-transform duration-500"
+                                                className="w-full h-40 object-cover transform group-hover:scale-110 transition-transform duration-700"
                                             />
-                                            {!MENU_DATA.find(c => c.id === activeCategory)?.featured?.inStock && (
-                                                <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
+                                            {!activeData.featured.inStock && (
+                                                <span className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded">Out of Stock</span>
                                             )}
                                         </div>
-                                        <h4 className="font-bold text-gray-900 mb-1 group-hover:text-[#14b8a6] transition-colors">
-                                            {MENU_DATA.find(c => c.id === activeCategory)?.featured?.name}
+                                        <h4 className="font-bold text-white mb-1 group-hover:text-teal-300 transition-colors line-clamp-1">
+                                            {activeData.featured.name}
                                         </h4>
+                                        <p className="text-xs text-gray-500 mb-3 line-clamp-2">Best seller this week</p>
                                         <div className="flex items-center justify-between">
-                                            <span className="font-bold text-lg text-gray-900">
-                                                ₹{MENU_DATA.find(c => c.id === activeCategory)?.featured?.price}
+                                            <span className="font-bold text-lg text-white">
+                                                ₹{activeData.featured.price}
                                             </span>
-                                            <button className="p-2 bg-white rounded-full shadow-sm hover:bg-[#14b8a6] hover:text-white transition-colors">
+                                            <button className="p-2.5 bg-teal-500 text-white rounded-full shadow-lg shadow-teal-500/30 hover:bg-teal-400 transition-all hover:scale-110">
                                                 <ShoppingCart className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -197,44 +201,44 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-[100] bg-white flex flex-col"
+                className="fixed inset-0 z-[100] bg-[#0f172a]/95 backdrop-blur-xl flex flex-col"
                 initial="hidden"
                 animate="visible"
                 exit="exit"
                 variants={mobileVariants}
             >
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="p-6 border-b border-white/10 flex items-center gap-4 pt-10">
                     <div className="flex-1 relative">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                        <Search className="w-4 h-4 text-gray-400 absolute left-4 top-3.5" />
                         <input
                             type="text"
                             placeholder="Search categories..."
-                            className="w-full bg-gray-50 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14b8a6]"
+                            className="w-full bg-white/5 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 text-white placeholder-gray-500 border border-white/10"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <button onClick={closeMenu} className="p-2 hover:bg-gray-100 rounded-full">
-                        <X className="w-6 h-6 text-gray-600" />
+                    <button onClick={closeMenu} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors border border-white/10">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
                     {filteredCategories.map((cat) => (
-                        <div key={cat.id} className="mb-4 border-b border-gray-50 last:border-0 pb-4">
+                        <div key={cat.id} className="mb-6 border-b border-white/5 last:border-0 pb-6">
                             <button
                                 onClick={() => toggleMobileCategory(cat.id)}
                                 className="w-full flex items-center justify-between py-2 group"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-[#14b8a6] group-hover:bg-[#14b8a6] group-hover:text-white transition-colors">
-                                        <cat.icon className="w-5 h-5" />
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${activeCategory === cat.id ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30' : 'bg-white/5 text-teal-400'}`}>
+                                        <cat.icon className="w-6 h-6" />
                                     </div>
-                                    <span className="font-bold text-gray-900 text-lg">{cat.name}</span>
+                                    <span className={`font-bold text-lg transition-colors ${activeCategory === cat.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>{cat.name}</span>
                                 </div>
-                                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${activeCategory === cat.id ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${activeCategory === cat.id ? 'rotate-180 text-teal-400' : ''}`} />
                             </button>
 
                             <AnimatePresence>
@@ -245,19 +249,22 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
                                         exit={{ height: 0, opacity: 0 }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="pl-14 pr-2 pt-2 pb-4 space-y-6">
+                                        <div className="pl-16 pr-2 pt-4 pb-2 space-y-8">
                                             {cat.columns.map((col, idx) => (
                                                 <div key={idx}>
-                                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{col.title}</h4>
-                                                    <ul className="space-y-3">
+                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                        <span className="w-4 h-px bg-gray-700"></span>
+                                                        {col.title}
+                                                    </h4>
+                                                    <ul className="space-y-4">
                                                         {col.items.map((item) => (
                                                             <li key={item.id}>
                                                                 <button
                                                                     onClick={() => handleNavigate(cat.slug, item.slug)}
-                                                                    className="flex items-center justify-between w-full text-gray-600 hover:text-[#14b8a6]"
+                                                                    className="flex items-center justify-between w-full text-gray-400 hover:text-white group/item text-sm font-medium"
                                                                 >
                                                                     {item.name}
-                                                                    <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                                                                    <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover/item:opacity-100 group-hover/item:ml-0 transition-all text-teal-400" />
                                                                 </button>
                                                             </li>
                                                         ))}
@@ -275,3 +282,5 @@ export default function MegaMenu({ mode, closeMenu }: MegaMenuProps) {
         </AnimatePresence>
     );
 }
+
+

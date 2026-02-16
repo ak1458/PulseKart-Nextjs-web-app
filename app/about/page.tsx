@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Users, Clock, MapPin } from 'lucide-react';
+import { ShieldCheck, Users, Clock, MapPin } from '@/lib/icons';
 
 export default function AboutPage() {
     return (
@@ -48,3 +48,4 @@ export default function AboutPage() {
         </div>
     );
 }
+

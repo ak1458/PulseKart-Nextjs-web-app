@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, AlertTriangle, CheckCircle, XCircle, Activity } from 'lucide-react';
+import { Sparkles, AlertTriangle, CheckCircle, XCircle, Activity } from '@/lib/icons';
 
 interface AssistantProps {
     prescription: any;
@@ -120,3 +120,4 @@ export default function PharmacistAssistant({ prescription }: AssistantProps) {
         </div>
     );
 }
+

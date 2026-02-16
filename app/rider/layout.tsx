@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, Package, User, Bell, Menu, X, LogOut } from 'lucide-react';
+import { MapPin, Package, User, Bell, Menu, X, LogOut } from '@/lib/icons';
 
 export default function RiderLayout({ children }: { children: React.ReactNode }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,3 +89,4 @@ export default function RiderLayout({ children }: { children: React.ReactNode })
         </div>
     );
 }
+

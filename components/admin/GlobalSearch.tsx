@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Command, X, ArrowRight, Package, ShoppingBag, User, FileText } from 'lucide-react';
+import { Search, Command, X, ArrowRight, Package, ShoppingBag, User, FileText } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -124,7 +124,7 @@ export default function GlobalSearch() {
                             initial={{ opacity: 0, scale: 0.95, y: -20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                            className="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[60vh]"
+                            className="relative w-full max-w-2xl bg-white text-slate-900 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[60vh]"
                         >
                             {/* Input Header */}
                             <div className="flex items-center p-4 border-b border-gray-100">
@@ -200,3 +200,4 @@ export default function GlobalSearch() {
         </>
     );
 }
+

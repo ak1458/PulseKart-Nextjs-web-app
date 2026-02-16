@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, X, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle, AlertCircle } from '@/lib/icons';
 
 interface UploadModalProps {
     isOpen: boolean;
@@ -40,43 +40,43 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+            <div className="glass-panel w-full max-w-md rounded-3xl p-0 overflow-hidden animate-scale-up relative border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                 <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-10"
+                    onClick={reset}
+                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
                 >
                     <X className="w-5 h-5" />
                 </button>
 
-                <div className="p-6">
-                    <div className="text-center mb-6">
-                        <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <Upload className="w-6 h-6 text-[#14b8a6]" />
+                <div className="p-8">
+                    <div className="text-center mb-8">
+                        <div className="w-14 h-14 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal-500/30 shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                            <Upload className="w-7 h-7 text-teal-300" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">Upload Prescription</h2>
-                        <p className="text-sm text-gray-500">Upload your doctor's prescription to order medicines.</p>
+                        <h2 className="text-2xl font-bold text-white mb-2">Upload Prescription</h2>
+                        <p className="text-sm text-gray-400 font-light">Upload your doctor's prescription to order medicines.</p>
                     </div>
 
                     {uploadStatus === 'success' ? (
-                        <div className="text-center py-4">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle className="w-8 h-8 text-green-600" />
+                        <div className="text-center py-6">
+                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
+                                <CheckCircle className="w-10 h-10 text-green-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Upload Successful!</h3>
-                            <p className="text-sm text-gray-600 mb-6">
+                            <h3 className="text-xl font-bold text-white mb-2">Upload Successful!</h3>
+                            <p className="text-sm text-gray-400 mb-8 font-light">
                                 Our pharmacist will review it shortly.
                             </p>
                             <button
                                 onClick={reset}
-                                className="w-full bg-[#14b8a6] text-white font-bold py-3 rounded-xl hover:bg-[#0f766e] transition-colors"
+                                className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] transition-all"
                             >
                                 Done
                             </button>
                         </div>
                     ) : (
                         <>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#14b8a6] hover:bg-teal-50/30 transition-all cursor-pointer relative group">
+                            <div className="border-2 border-dashed border-white/20 rounded-2xl p-10 text-center hover:border-teal-400 hover:bg-teal-500/5 transition-all cursor-pointer relative group bg-white/5">
                                 <input
                                     type="file"
                                     accept="image/*,.pdf"
@@ -84,26 +84,26 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div className="pointer-events-none group-hover:scale-105 transition-transform">
-                                    <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3 group-hover:text-[#14b8a6]" />
-                                    <p className="font-medium text-gray-900 mb-1">Click to upload</p>
+                                    <Upload className="w-12 h-12 text-gray-500 mx-auto mb-4 group-hover:text-teal-400 transition-colors" />
+                                    <p className="font-bold text-white mb-1">Click to upload</p>
                                     <p className="text-xs text-gray-500">SVG, PNG, JPG or PDF</p>
                                 </div>
                             </div>
 
                             {file && (
-                                <div className="mt-4 bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                                <div className="mt-5 bg-white/5 rounded-xl p-3 flex items-center justify-between border border-white/10">
                                     <div className="flex items-center gap-3 overflow-hidden">
-                                        <div className="p-2 bg-white rounded border border-gray-200">
-                                            <FileText className="w-4 h-4 text-[#14b8a6]" />
+                                        <div className="p-2 bg-white/10 rounded border border-white/10">
+                                            <FileText className="w-5 h-5 text-teal-300" />
                                         </div>
                                         <div className="text-left min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                            <p className="text-sm font-medium text-white truncate">{file.name}</p>
                                             <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => setFile(null)}
-                                        className="p-1 hover:bg-gray-200 rounded-full text-gray-500"
+                                        className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -113,18 +113,18 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
                             <button
                                 onClick={handleUpload}
                                 disabled={!file || isUploading}
-                                className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition-all ${!file || isUploading
-                                        ? 'bg-gray-300 cursor-not-allowed'
-                                        : 'bg-[#14b8a6] hover:bg-[#0f766e] shadow-lg shadow-teal-500/20'
+                                className={`w-full mt-8 py-3.5 rounded-xl font-bold text-white transition-all ${!file || isUploading
+                                    ? 'bg-white/10 text-gray-500 cursor-not-allowed border border-white/5'
+                                    : 'bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-[0_0_20px_rgba(20,184,166,0.4)] shadow-lg'
                                     }`}
                             >
                                 {isUploading ? 'Uploading...' : 'Submit Prescription'}
                             </button>
 
-                            <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-blue-800 text-left">
-                                    Ensure patient & doctor names are visible.
+                            <div className="mt-6 flex items-start gap-3 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                                <p className="text-xs text-blue-200 text-left leading-relaxed">
+                                    Ensure patient & doctor names are clearly visible. Your data is encrypted and secure.
                                 </p>
                             </div>
                         </>
@@ -134,3 +134,4 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         </div>
     );
 }
+

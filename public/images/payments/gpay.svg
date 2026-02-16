@@ -1,0 +1,5 @@
+<svg width="120" height="48" viewBox="0 0 120 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="118" height="46" rx="10" fill="#0f172a" stroke="#1f2937"/>
+  <text x="22" y="30" fill="#e2e8f0" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="600">GPay</text>
+  <circle cx="88" cy="24" r="10" fill="#22d3ee" fill-opacity="0.6"/>
+</svg>

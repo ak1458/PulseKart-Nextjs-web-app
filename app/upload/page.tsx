@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle, AlertCircle } from '@/lib/icons';
 
 export default function UploadPage() {
     const [file, setFile] = useState<File | null>(null);
@@ -109,3 +109,4 @@ export default function UploadPage() {
         </div>
     );
 }
+

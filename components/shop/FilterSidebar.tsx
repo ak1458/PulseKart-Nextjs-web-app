@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check } from "@/lib/icons";
 
 export default function FilterSidebar() {
     return (
@@ -52,3 +52,6 @@ export default function FilterSidebar() {
         </div>
     );
 }
+
+
+

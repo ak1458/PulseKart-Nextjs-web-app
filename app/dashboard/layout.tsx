@@ -13,27 +13,26 @@ import {
     LogOut,
     Menu,
     X
-} from 'lucide-react';
-
-const MENU_ITEMS = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Orders', href: '/dashboard/orders', icon: ShoppingBag },
-    { name: 'Prescriptions', href: '/dashboard/prescriptions', icon: FileText },
-    { name: 'Saved Items', href: '/dashboard/saved', icon: Heart },
-    { name: 'Addresses', href: '/dashboard/addresses', icon: MapPin },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-];
+} from '@/lib/icons';
+import SignOutModal from '@/components/ui/SignOutModal';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen flex bg-transparent">
+            {/* Sign Out Modal */}
+            <SignOutModal 
+                isOpen={isSignOutModalOpen} 
+                onClose={() => setIsSignOutModalOpen(false)} 
+            />
+
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
                     onClick={() => setIsSidebarOpen(false)}
                 />
             )}
@@ -41,22 +40,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Sidebar */}
             <aside
                 className={`
-                    fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out
-                    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                    fixed lg:sticky top-0 lg:top-24 h-[calc(100vh-6rem)] z-50 w-64 glass-dock border-r border-white/10 
+                    transform transition-transform duration-300 ease-out lg:translate-x-0 lg:ml-6 lg:rounded-2xl lg:mb-6
+                    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
             >
                 <div className="h-full flex flex-col">
-                    <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-gray-800">My Account</h2>
+                    <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-white">My Account</h2>
                         <button
                             onClick={() => setIsSidebarOpen(false)}
-                            className="lg:hidden text-gray-500"
+                            className="lg:hidden text-gray-400 hover:text-white"
                         >
                             <X className="w-6 h-6" />
                         </button>
                     </div>
 
-                    <nav className="flex-1 p-4 overflow-y-auto">
+                    <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
                         <div className="space-y-1">
                             {[
                                 { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -71,21 +71,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         href={item.href}
                                         onClick={() => setIsSidebarOpen(false)}
                                         className={`
-                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden
                                             ${isActive
-                                                ? 'bg-teal-50 text-teal-600 shadow-sm'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:translate-x-1'
+                                                ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.1)]'
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                                             }
                                         `}
                                     >
-                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-600' : 'text-gray-400 group-hover:text-teal-500'}`} />
-                                        {item.name}
+                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-400 icon-glow' : 'text-gray-500 group-hover:text-white'}`} />
+                                        <span className="relative z-10">{item.name}</span>
+                                        {isActive && <div className="absolute inset-0 bg-teal-400/5 blur-xl"></div>}
                                     </Link>
                                 );
                             })}
                         </div>
 
-                        <div className="my-4 border-t border-gray-100"></div>
+                        <div className="my-4 border-t border-white/5"></div>
 
                         <div className="space-y-1">
                             {[
@@ -100,21 +101,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         href={item.href}
                                         onClick={() => setIsSidebarOpen(false)}
                                         className={`
-                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden
                                             ${isActive
-                                                ? 'bg-teal-50 text-teal-600 shadow-sm'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:translate-x-1'
+                                                ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.1)]'
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                                             }
                                         `}
                                     >
-                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-600' : 'text-gray-400 group-hover:text-teal-500'}`} />
-                                        {item.name}
+                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-400 icon-glow' : 'text-gray-500 group-hover:text-white'}`} />
+                                        <span className="relative z-10">{item.name}</span>
+                                        {isActive && <div className="absolute inset-0 bg-teal-400/5 blur-xl"></div>}
                                     </Link>
                                 );
                             })}
                         </div>
 
-                        <div className="my-4 border-t border-gray-100"></div>
+                        <div className="my-4 border-t border-white/5"></div>
 
                         <div className="space-y-1">
                             {[
@@ -128,23 +130,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         href={item.href}
                                         onClick={() => setIsSidebarOpen(false)}
                                         className={`
-                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
+                                            flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden
                                             ${isActive
-                                                ? 'bg-teal-50 text-teal-600 shadow-sm'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:translate-x-1'
+                                                ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.1)]'
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                                             }
                                         `}
                                     >
-                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-600' : 'text-gray-400 group-hover:text-teal-500'}`} />
-                                        {item.name}
+                                        <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-400 icon-glow' : 'text-gray-500 group-hover:text-white'}`} />
+                                        <span className="relative z-10">{item.name}</span>
+                                        {isActive && <div className="absolute inset-0 bg-teal-400/5 blur-xl"></div>}
                                     </Link>
                                 );
                             })}
                         </div>
                     </nav>
 
-                    <div className="p-4 border-t border-gray-100">
-                        <button className="flex items-center gap-3 px-4 py-3 w-full text-left text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                    <div className="p-4 border-t border-white/10">
+                        <button 
+                            onClick={() => setIsSignOutModalOpen(true)}
+                            className="flex items-center gap-3 px-4 py-3 w-full text-left text-sm font-medium text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                        >
                             <LogOut className="w-5 h-5" />
                             Sign Out
                         </button>
@@ -153,19 +159,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 min-w-0">
+            <main className="flex-1 min-w-0 pt-20 md:pt-24 px-4 pb-12">
                 {/* Mobile Header */}
-                <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center gap-3 sticky top-0 z-30">
+                <div className="lg:hidden glass-dock border-b border-white/10 p-4 flex items-center gap-3 sticky top-20 z-30 mb-6 rounded-xl">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        className="p-2 -ml-2 text-gray-300 hover:bg-white/10 rounded-lg"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <span className="font-semibold text-gray-800">Dashboard</span>
+                    <span className="font-semibold text-white">Dashboard</span>
                 </div>
 
-                <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+                <div className="max-w-5xl mx-auto">
                     {children}
                 </div>
             </main>

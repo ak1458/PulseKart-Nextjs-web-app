@@ -1,5 +1,6 @@
-import { Heart, Plus, Upload } from "lucide-react";
+import { Heart, Plus, Upload, Star } from "@/lib/icons";
 import Link from "next/link";
+import { getProductImage } from "@/lib/images";
 
 interface Product {
     id: string;
@@ -17,7 +18,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="group bg-white rounded-3xl border border-slate-100 overflow-hidden hover:shadow-xl hover:shadow-sky-100/50 transition-all duration-300 relative">
             <div className="relative h-48 overflow-hidden bg-slate-50">
                 <img
-                    src={product.image}
+                    src={getProductImage(product.image)}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
@@ -42,9 +43,10 @@ export default function ProductCard({ product }: { product: Product }) {
                 </Link>
 
                 <div className="flex items-center gap-1 mb-4">
-                    <div className="flex text-yellow-400 text-xs">
-                        {"★".repeat(Math.floor(product.rating))}
-                        {"★".repeat(5 - Math.floor(product.rating)).replace(/★/g, "☆")}
+                    <div className="flex items-center gap-0.5 text-yellow-400">
+                        {[...Array(5)].map((_, idx) => (
+                            <Star key={idx} className={idx < Math.floor(product.rating) ? "w-3.5 h-3.5 fill-current" : "w-3.5 h-3.5 opacity-30"} />
+                        ))}
                     </div>
                     <span className="text-xs text-slate-400 font-medium">({product.reviews})</span>
                 </div>
@@ -61,3 +63,6 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
     );
 }
+
+
+
