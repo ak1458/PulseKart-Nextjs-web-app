@@ -1,5 +1,6 @@
-import { Controller, Post, Body, UsePipes, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, UsePipes, HttpCode, HttpStatus, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto, loginSchema } from './dto/login.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { z } from 'zod';
@@ -31,5 +32,18 @@ export class AuthController {
     @UsePipes(new ZodValidationPipe(registerSchema))
     async register(@Body() registerDto: RegisterDto) {
         return this.authService.register(registerDto.email, registerDto.password, registerDto.name);
+    }
+
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    async getProfile(@Request() req) {
+        // req.user is set by JwtStrategy
+        return {
+            id: req.user.sub,
+            email: req.user.email,
+            role: req.user.role,
+            name: req.user.name,
+            isActive: true,
+        };
     }
 }

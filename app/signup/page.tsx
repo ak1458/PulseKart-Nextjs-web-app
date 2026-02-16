@@ -110,16 +110,23 @@ export default function SignupPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-md relative z-10"
       >
-        {/* Logo Circle */}
+        {/* Logo */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           className="flex justify-center mb-6"
         >
-          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-teal-400 to-emerald-500 flex items-center justify-center shadow-2xl shadow-teal-500/30 border border-white/20">
-            <span className="text-3xl font-bold text-white">P</span>
-          </div>
+          <Link href="/">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-400 blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
+              <img
+                src="/logo.png"
+                alt="PulseKart"
+                className="h-14 w-auto relative z-10 brightness-0 invert group-hover:scale-110 transition-transform duration-300"
+              />
+            </div>
+          </Link>
         </motion.div>
 
         {/* Main Card */}

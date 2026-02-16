@@ -9,24 +9,30 @@ export class AuthService {
     constructor(
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
-    ) {}
+    ) { }
 
     async login(loginDto: LoginDto) {
         const { email, password } = loginDto;
+        console.log(`[AuthService] Login attempt for: ${email}`);
 
         // Find user by email with password
         const user = await this.usersService.findByEmailWithPassword(email);
 
         if (!user) {
+            console.log(`[AuthService] User not found: ${email}`);
             throw new UnauthorizedException('Invalid email or password');
         }
 
+        console.log(`[AuthService] User found: ${user.email}, role: ${user.role}, active: ${user.isActive}`);
+
         if (!user.isActive) {
+            console.log(`[AuthService] User is disabled: ${email}`);
             throw new UnauthorizedException('Account is disabled');
         }
 
         // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log(`[AuthService] Password valid: ${isPasswordValid}`);
 
         if (!isPasswordValid) {
             throw new UnauthorizedException('Invalid email or password');
@@ -37,6 +43,7 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             role: user.role,
+            name: user.name,
         };
 
         return {
@@ -64,6 +71,7 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             role: user.role,
+            name: user.name,
         };
 
         return {
