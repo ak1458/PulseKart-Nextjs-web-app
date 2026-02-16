@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "name": "pulsekart-frontend",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "@pulsekart_api_url"
+    "NEXT_PUBLIC_API_URL": "https://pulsekart-backend.onrender.com"
   },
   "rewrites": [
     {
