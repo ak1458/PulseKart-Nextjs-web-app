@@ -31,6 +31,9 @@ import { PaymentMethod } from './payments/entities/payment-method.entity';
 import { PaymentGatewayDiscount } from './payments/entities/payment-gateway-discount.entity';
 import { PaymentTransaction } from './payments/entities/payment-transaction.entity';
 import { DatabaseModule } from './database/database.module';
+import { OrdersModule } from './orders/orders.module';
+import { Order } from './orders/entities/order.entity';
+import { OrderItem } from './orders/entities/order-item.entity';
 
 @Module({
     imports: [
@@ -40,13 +43,13 @@ import { DatabaseModule } from './database/database.module';
             throttlers: [
                 {
                     ttl: 60000, // 60 seconds
-                    limit: 10,  // 10 requests
+                    limit: 100,  // 100 requests
                 },
             ],
         }),
         TypeOrmModule.forRoot({
             type: 'postgres',
-            host: process.env.POSTGRES_HOST || 'localhost',
+            host: process.env.POSTGRES_HOST || '127.0.0.1',
             port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
             username: process.env.POSTGRES_USER || 'pulse_user',
             password: process.env.POSTGRES_PASSWORD || 'pulse_password',
@@ -75,6 +78,9 @@ import { DatabaseModule } from './database/database.module';
                 PaymentMethod,
                 PaymentGatewayDiscount,
                 PaymentTransaction,
+                // Order entities
+                Order,
+                OrderItem,
             ],
             synchronize: false, // Manual migrations needed due to constraint conflicts
             // Connection pooling
@@ -91,6 +97,7 @@ import { DatabaseModule } from './database/database.module';
         PricingModule,
         ReportsModule,
         PaymentsModule,
+        OrdersModule,
         DatabaseModule, // Seeds admin user on startup
     ],
     controllers: [AppController],

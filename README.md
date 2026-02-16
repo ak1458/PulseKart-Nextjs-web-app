@@ -285,13 +285,29 @@ For detailed schema, see [schema.sql](./backend/src/db/schema.sql)
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+**New to the project?** Start here:
+- 📚 [Project Structure](./PROJECT_STRUCTURE.md) - Understand the codebase
+- 🎯 [Contributing Guide](./CONTRIBUTING.md) - How to make changes
+- 🚀 [Deployment Guide](./DEPLOYMENT.md) - How to deploy
+
+### Quick Start for Contributors
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. Follow the [coding guidelines](./CONTRIBUTING.md#-coding-guidelines)
+4. Commit your changes: `git commit -m 'feat: add AmazingFeature'`
+5. Push to the branch: `git push origin feature/AmazingFeature`
+6. Open a Pull Request
+
+## 🚀 Deployment
+
+### Deploy on Render (Recommended)
+
+One-click deployment using Blueprint:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+Or follow the [step-by-step deployment guide](./DEPLOYMENT.md).
 
 ## 📝 License
 

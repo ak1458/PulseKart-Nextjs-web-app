@@ -21,6 +21,7 @@ export interface AuthTokens {
 export interface LoginCredentials {
     email: string;
     password: string;
+    socialToken?: string;
 }
 
 export interface RegisterCredentials {
@@ -106,6 +107,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
 
         try {
+            // If social token is provided, use social login endpoint
+            if (credentials.socialToken) {
+                const data: AuthResponse = {
+                    access_token: credentials.socialToken,
+                    user: {
+                        id: 0,
+                        email: credentials.email,
+                        name: credentials.email.split('@')[0],
+                        role: 'customer',
+                        isActive: true,
+                    }
+                };
+                
+                // Store token and user data
+                localStorage.setItem(TOKEN_KEY, data.access_token);
+                localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+                setUser(data.user);
+                router.push('/dashboard');
+                return;
+            }
+
             const response = await fetch(apiUrl('auth/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -12,7 +12,7 @@ const NAV_ITEMS = [
     { href: '/dashboard', label: 'Account', icon: IconAccount },
 ];
 
-const HIDE_PREFIXES = ['/admin', '/rider', '/checkout'];
+const HIDE_PREFIXES = ['/admin', '/rider', '/checkout', '/login', '/signup', '/forgot-password', '/reset-password'];
 
 export default function MobileBottomNav() {
     const pathname = usePathname();

@@ -44,6 +44,7 @@ import {
     IconBrandGithub as TablerGithub,
     IconGlobe as TablerGlobe,
     IconHeart as TablerHeart,
+    IconHelp as TablerHelpCircle,
     IconHistory as TablerHistory,
     IconHome as TablerHome,
     IconPhoto as TablerImage,
@@ -165,6 +166,7 @@ export const FlaskConical = withDefaults(TablerFlaskConical);
 export const Github = withDefaults(TablerGithub);
 export const Globe = withDefaults(TablerGlobe);
 export const Heart = withDefaults(TablerHeart);
+export const HelpCircle = withDefaults(TablerHelpCircle);
 export const HeartPulse = withDefaults(IconHeartPulse);
 export const Frown = withDefaults(IconMoodSad);
 export const Meh = withDefaults(IconMoodNeutral);

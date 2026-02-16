@@ -25,6 +25,7 @@ import {
 } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlobalSearch from '@/components/admin/GlobalSearch';
+import { useAuth } from '@/context/AuthContext';
 
 const MENU_ITEMS = [
     { name: 'AI Worker', icon: Bot, path: '/admin/ai' },
@@ -47,9 +48,10 @@ const MENU_ITEMS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const pathname = usePathname();
+    const { logout } = useAuth();
 
     return (
-        <div className="min-h-screen bg-transparent flex -mt-[var(--site-top-offset)] -mb-[var(--site-bottom-offset)]">
+        <div className="min-h-screen bg-transparent flex -mt-[var(--site-top-offset)]">
             {/* Sidebar */}
             <motion.aside
                 initial={{ width: 280 }}
@@ -109,7 +111,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </nav>
 
                 <div className="p-4 border-t border-white/10">
-                    <button className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors ${!isSidebarOpen && 'justify-center'}`}>
+                    <button 
+                        onClick={logout}
+                        className={`flex items-center gap-3 w-full px-3 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors ${!isSidebarOpen && 'justify-center'}`}
+                    >
                         <LogOut className="w-5 h-5" />
                         {isSidebarOpen && <span className="font-medium text-sm">Logout</span>}
                     </button>

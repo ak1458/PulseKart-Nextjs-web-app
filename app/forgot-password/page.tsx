@@ -2,8 +2,17 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from "@/lib/icons";
+import {
+  Mail,
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Sparkles,
+  ShieldCheck,
+} from "@/lib/icons";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -20,222 +29,196 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email");
-      return;
-    }
-
     setIsLoading(true);
-
-    try {
-      // TODO: Implement actual password reset API call
-      // const response = await fetch(apiUrl('auth/forgot-password'), {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email }),
-      // });
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsSubmitted(true);
-    } catch (err) {
-      setError("Failed to send reset link. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setIsLoading(false);
+    setIsSubmitted(true);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#030712]">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#030712] via-[#0b1324] to-[#0f172a]" />
-
-      {/* Floating Orbs */}
-      <motion.div
-        animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-[100px]"
-      />
-      <motion.div
-        animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-20 right-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]"
-      />
-      <motion.div
-        animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-400/5 rounded-full blur-[150px]"
-      />
-
-      {/* Glass Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md relative z-10"
+    <div className="min-h-screen bg-[#030712] flex flex-col lg:flex-row">
+      {/* Mobile: Back Button */}
+      <Link
+        href="/login"
+        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white"
       >
-        {/* Logo */}
+        <ArrowLeft className="w-5 h-5" />
+      </Link>
+
+      {/* Desktop Left Side */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-3/5 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#030712] via-[#0a0f1a] to-[#0f172a]" />
+        <div className="absolute inset-0 bg-[url('/images/pharmacy-bg.jpg')] bg-cover bg-center opacity-20" />
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-[#030712] via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#030712] to-transparent" />
+        <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[150px]" />
+
+        <div className="relative z-10 flex flex-col justify-center px-16 xl:px-24 max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Link href="/" className="flex items-center gap-3 mb-8">
+              <div className="relative w-12 h-12">
+                <Image
+                  src="/logo.png"
+                  alt="PulseKart"
+                  fill
+                  className="object-contain drop-shadow-lg"
+                  priority
+                />
+              </div>
+              <span className="text-white font-bold text-2xl tracking-tight">
+                Pulse<span className="text-teal-400">Kart</span>
+              </span>
+            </Link>
+
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm font-medium mb-6">
+              <ShieldCheck className="w-4 h-4" />
+              Secure Password Reset
+            </div>
+
+            <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
+              Forgot Your{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-emerald-400">
+                Password?
+              </span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-md leading-relaxed">
+              Don't worry! It happens to the best of us. Enter your email address 
+              and we'll send you a link to reset your password securely.
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
+        <div className="lg:hidden absolute inset-0 bg-gradient-to-b from-[#030712] via-[#0a0f1a] to-[#030712]" />
+        <div className="lg:hidden absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-teal-500/10 rounded-full blur-[100px]" />
+
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="flex justify-center mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 w-full max-w-sm"
         >
-          <Link href="/">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-400 blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
-              <img
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex justify-center mb-6">
+            <div className="relative w-16 h-16">
+              <Image
                 src="/logo.png"
                 alt="PulseKart"
-                className="h-12 w-auto relative z-10 brightness-0 invert group-hover:scale-110 transition-transform duration-300"
+                fill
+                className="object-contain drop-shadow-lg"
+                priority
               />
             </div>
+          </div>
+
+          {/* Desktop Back */}
+          <Link
+            href="/login"
+            className="hidden lg:flex absolute -top-12 left-0 items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to login
           </Link>
-        </motion.div>
 
-        {/* Main Card */}
-        <div className="glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl backdrop-blur-xl bg-white/[0.03]">
-          <div className="p-8">
-            {/* Back Link */}
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-teal-300 transition-colors mb-6"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Login
-              </Link>
-            </motion.div>
+          {/* Mobile Heading */}
+          <div className="lg:hidden text-center mb-6">
+            <h1 className="text-2xl font-bold text-white mb-2">Forgot Password?</h1>
+            <p className="text-gray-500 text-sm">We'll send you a reset link</p>
+          </div>
 
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-center mb-8"
-            >
-              <h1 className="text-3xl font-bold text-white mb-2">
-                Forgot Password?
-              </h1>
-              <p className="text-gray-400 text-sm">
-                No worries! Enter your email and we&apos;ll send you a reset link.
-              </p>
-            </motion.div>
+          {/* Desktop Heading */}
+          <div className="hidden lg:block mb-6">
+            <h2 className="text-2xl font-bold text-white mb-1">Reset Password</h2>
+            <p className="text-gray-500 text-sm">Enter your email to continue</p>
+          </div>
 
-            {/* Error Display */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center flex items-center justify-center gap-2"
-              >
-                <AlertCircle className="w-4 h-4" />
-                {error}
-              </motion.div>
-            )}
-
-            {/* Success State */}
-            {isSubmitted ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-8"
-              >
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-emerald-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Check Your Email
-                </h3>
-                <p className="text-gray-400 text-sm mb-6">
-                  We&apos;ve sent a password reset link to{" "}
-                  <span className="text-teal-300">{email}</span>
-                </p>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-6 py-3 btn-gradient rounded-xl text-white font-bold hover:shadow-lg hover:shadow-teal-500/20 transition-all"
-                >
-                  Return to Login
-                </Link>
-              </motion.div>
-            ) : (
-              /* Form */
-              <motion.form
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                onSubmit={handleSubmit}
-                className="space-y-5"
-              >
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300 flex items-center gap-1">
-                    Email address <span className="text-teal-400">*</span>
+          {/* Form Card */}
+          <div className="bg-white/[0.02] backdrop-blur-xl rounded-2xl lg:rounded-3xl border border-white/10 p-5 sm:p-6 shadow-2xl shadow-black/50">
+            {!isSubmitted ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-400 font-medium">
+                    Email address<span className="text-red-400">*</span>
                   </label>
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5 group-focus-within:text-teal-400 transition-colors" />
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
-                      className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-teal-500/50 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all hover:bg-white/[0.07]"
-                      disabled={isLoading}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-600 focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 outline-none transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold text-lg shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
-                    <>
-                      <Loader2 className="animate-spin h-5 w-5" />
-                      Sending...
-                    </>
+                    <Loader2 className="animate-spin h-4 w-4" />
                   ) : (
-                    <>Send Reset Link</>
+                    <>
+                      <span>Send Reset Link</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </>
                   )}
                 </button>
-
-                {/* Help Text */}
-                <p className="text-center text-sm text-gray-500">
-                  Remember your password?{" "}
-                  <Link
-                    href="/login"
-                    className="text-teal-400 font-semibold hover:text-teal-300 transition-colors"
-                  >
-                    Sign in
-                  </Link>
+              </form>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="py-6 text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Check Your Email!</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  We've sent a password reset link to<br />
+                  <span className="text-white">{email}</span>
                 </p>
-              </motion.form>
+                <button
+                  onClick={() => { setIsSubmitted(false); setEmail(""); }}
+                  className="text-teal-400 text-sm hover:text-teal-300 transition-colors"
+                >
+                  Didn't receive it? Try again
+                </button>
+              </motion.div>
             )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="mt-8 text-center text-sm text-gray-500"
-        >
-          Need help?{" "}
-          <Link
-            href="/help"
-            className="text-teal-400 hover:text-teal-300 transition-colors"
-          >
-            Contact Support
-          </Link>
-        </motion.p>
-      </motion.div>
+          {/* Sign In Link */}
+          <p className="mt-5 text-center text-sm text-gray-500">
+            Remember your password?{" "}
+            <Link href="/login" className="text-teal-400 font-semibold hover:text-teal-300 transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }

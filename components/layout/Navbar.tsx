@@ -9,10 +9,12 @@ import {
     X,
     Upload,
     User,
+    LogOut,
     IconCart,
     IconHealth
 } from '@/lib/icons';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import MegaMenu from './MegaMenu';
 import UploadModal from '@/components/ui/UploadModal';
 
@@ -22,6 +24,7 @@ export default function Navbar() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const { cartCount } = useCart();
+    const { isAuthenticated, logout } = useAuth();
     const searchRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -47,7 +50,8 @@ export default function Navbar() {
 
     const pathname = usePathname();
 
-    if (pathname?.startsWith('/admin')) return null;
+    const HIDE_PATHS = ['/admin', '/login', '/signup', '/forgot-password', '/reset-password'];
+    if (HIDE_PATHS.some(path => pathname?.startsWith(path))) return null;
 
     return (
         <nav className="fixed top-6 left-0 right-0 z-50 flex flex-col items-center px-4">
@@ -108,10 +112,20 @@ export default function Navbar() {
                             )}
                         </Link>
 
-                        {/* User Profile */}
-                        <Link href="/dashboard" className="hidden sm:flex w-10 h-10 rounded-full glass-button items-center justify-center text-gray-300 overflow-hidden group hover:border-teal-500/50 transition-colors shrink-0">
-                            <User className="w-4 h-4 group-hover:text-teal-300 group-hover:scale-110 transition-all" />
-                        </Link>
+                        {/* User Profile / Logout */}
+                        {isAuthenticated ? (
+                            <button 
+                                onClick={logout}
+                                className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Logout
+                            </button>
+                        ) : (
+                            <Link href="/login" className="hidden sm:flex w-10 h-10 rounded-full glass-button items-center justify-center text-gray-300 overflow-hidden group hover:border-teal-500/50 transition-colors shrink-0">
+                                <User className="w-4 h-4 group-hover:text-teal-300 group-hover:scale-110 transition-all" />
+                            </Link>
+                        )}
 
                         {/* Mobile/Tablet Menu (hide on phones; bottom nav handles Shop) */}
                         <button

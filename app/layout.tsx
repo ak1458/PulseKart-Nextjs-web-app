@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import Chatbot from "@/components/ui/Chatbot";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import HealthCheckWrapper from "@/components/layout/HealthCheckWrapper";
+import MainContent from "@/components/layout/MainContent";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import AuthMiddleware from "@/components/auth/AuthMiddleware";
@@ -47,12 +49,12 @@ export default function RootLayout({
                                 <CartProvider>
                                     <ScrollToTop />
                                     <Navbar />
-                                    <main className="min-h-screen pt-[var(--site-top-offset)] pb-[var(--site-bottom-offset)]">
+                                    <MainContent>
                                         {children}
-                                    </main>
+                                    </MainContent>
                                     <Chatbot />
                                     <MobileBottomNav />
-                                    <Footer />
+                                    <ConditionalFooter />
                                     <HealthCheckWrapper />
                                 </CartProvider>
                             </AuthMiddleware>
