@@ -1,45 +1,94 @@
-# Render Blueprint for PulseKart
-# This file configures automatic deployment on Render
+# PulseKart - Render Deployment Blueprint
+# Perfect for startups - One click deploy everything!
 
 services:
-  # Frontend (Next.js)
-  # Frontend deployed to Vercel
-  
-  # Backend (NestJS)
+  # Frontend + Backend (Next.js with API routes)
   - type: web
-    name: pulsekart-backend
-    env: node
+    name: pulsekart
+    runtime: node
+    plan: free
     branch: refactor/cleanup-and-optimization
-    rootDir: backend
-    buildCommand: npm install && npm run build
-    startCommand: npm run start:prod
+    buildCommand: |
+      # Install dependencies
+      npm install
+      cd backend && npm install && cd ..
+      
+      # Build backend
+      cd backend && npm run build && cd ..
+      
+      # Build frontend  
+      npm run build
+    startCommand: |
+      # Start backend in background
+      cd backend && npm run start:prod &
+      
+      # Start frontend
+      npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-      - key: DB_SYNC
-        value: true
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: pulsekart
+          type: web
+          property: host
       - key: JWT_SECRET
         generateValue: true
-      - key: CORS_ORIGINS
-        value: https://pulsekart.vercel.app
-    databases:
-      - name: pulsekart-db
-        databaseName: pulsekart
-        user: pulsekart
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pulsekart-db
+          property: connectionString
+    disk:
+      name: uploads
+      mountPath: /uploads
+      sizeGB: 1
 
-  # Optional: Background Worker
-  # - type: worker
-  #   name: pulsekart-worker
-  #   env: node
-  #   branch: main
+  # Alternative: Separate services (better for scaling)
+  # Uncomment below and comment above for production setup
+  
+  # # Backend API
+  # - type: web
+  #   name: pulsekart-api
+  #   runtime: node
+  #   plan: free
   #   rootDir: backend
   #   buildCommand: npm install && npm run build
-  #   startCommand: npm run worker:start
+  #   startCommand: npm run start:prod
   #   envVars:
   #     - key: NODE_ENV
   #       value: production
-  #     - fromDatabase:
+  #     - key: PORT
+  #       value: 10000
+  #     - key: JWT_SECRET
+  #       generateValue: true
+  #     - key: DATABASE_URL
+  #       fromDatabase:
   #         name: pulsekart-db
   #         property: connectionString
+  #     - key: CORS_ORIGINS
+  #       value: https://pulsekart.onrender.com
+
+  # # Frontend
+  # - type: web
+  #   name: pulsekart-web
+  #   runtime: node
+  #   plan: free
+  #   buildCommand: npm install && npm run build
+  #   startCommand: npm start
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: NEXT_PUBLIC_API_URL
+  #       fromService:
+  #         name: pulsekart-api
+  #         type: web
+  #         property: host
+
+databases:
+  - name: pulsekart-db
+    databaseName: pulsekart
+    user: pulsekart
+    plan: free
+    # 1GB storage, perfect for startups
+    # Auto-backups daily
+    # Upgrade when you have 1000+ users
