@@ -3,30 +3,13 @@
 
 services:
   # Frontend (Next.js)
-  - type: web
-    name: pulsekart-frontend
-    env: node
-    branch: main
-    buildCommand: npm install && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: pulsekart-backend
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://pulsekart-backend.onrender.com/api/*
-
+  # Frontend deployed to Vercel
+  
   # Backend (NestJS)
   - type: web
     name: pulsekart-backend
     env: node
-    branch: main
+    branch: refactor/cleanup-and-optimization
     rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm run start:prod
@@ -35,10 +18,12 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: DB_SYNC
+        value: true
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://pulsekart-frontend.onrender.com
+        value: https://pulsekart.vercel.app
     databases:
       - name: pulsekart-db
         databaseName: pulsekart

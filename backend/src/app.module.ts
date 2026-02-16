@@ -82,7 +82,7 @@ import { OrderItem } from './orders/entities/order-item.entity';
                 Order,
                 OrderItem,
             ],
-            synchronize: false, // Manual migrations needed due to constraint conflicts
+            synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
             // Connection pooling
             extra: {
                 max: 20,
