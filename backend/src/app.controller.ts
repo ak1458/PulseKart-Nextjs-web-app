@@ -11,11 +11,13 @@ export class AppController {
   }
 
   @Get('health')
-  getHealth() {
+  @HttpCode(HttpStatus.OK)
+  getHealth(): { status: string; timestamp: string; service: string; uptime: number } {
     return {
-      status: 'ok',
+      status: 'healthy',
       timestamp: new Date().toISOString(),
       service: 'pulse-kart-backend',
+      uptime: process.uptime(),
     };
   }
 }

@@ -6,20 +6,36 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     // Enable CORS with restricted origins
+    const isProduction = process.env.NODE_ENV === 'production';
     const allowedOrigins = process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(',')
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
         : ['http://localhost:3000', 'http://localhost:3001'];
+
+    // In production, wildcard is NOT allowed for security
+    if (isProduction && allowedOrigins.includes('*')) {
+        throw new Error('ALLOWED_ORIGINS cannot contain wildcard (*) in production');
+    }
 
     app.enableCors({
         origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
             // Allow requests with no origin (mobile apps, curl, etc.)
             if (!origin) return callback(null, true);
 
-            // Allow wildcard for easier dev/startup usage, or specific matches
-            if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-                callback(null, true);
+            // In production, only allow specific origins
+            // In development, allow localhost and wildcard
+            if (isProduction) {
+                if (allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
             } else {
-                callback(new Error('Not allowed by CORS'));
+                // Development mode - more permissive
+                if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || origin.includes('localhost')) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
             }
         },
         credentials: true,

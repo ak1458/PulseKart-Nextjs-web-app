@@ -71,6 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const savedUser = localStorage.getItem(USER_KEY);
 
                 if (token && savedUser) {
+                    // Check if we validated recently (within last 10 minutes)
+                    const lastValidated = sessionStorage.getItem('last_token_validation');
+                    const now = Date.now();
+                    
+                    if (lastValidated && now - parseInt(lastValidated, 10) < 10 * 60 * 1000) {
+                        // Use cached user data if validation was recent
+                        setUser(JSON.parse(savedUser));
+                        setIsLoading(false);
+                        return;
+                    }
+
                     // Validate token by fetching current user
                     const response = await fetch(apiUrl('auth/me'), {
                         headers: {
@@ -82,17 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (response.ok) {
                         const userData: User = await response.json();
                         setUser(userData);
+                        sessionStorage.setItem('last_token_validation', now.toString());
                     } else {
                         // Token is invalid, clear storage
                         localStorage.removeItem(TOKEN_KEY);
                         localStorage.removeItem(USER_KEY);
+                        sessionStorage.removeItem('last_token_validation');
                     }
                 }
             } catch (err) {
-                console.error('Auth initialization error:', err);
-                // Clear storage on error
+                // Silent fail - clear storage on error
                 localStorage.removeItem(TOKEN_KEY);
                 localStorage.removeItem(USER_KEY);
+                sessionStorage.removeItem('last_token_validation');
             } finally {
                 setIsLoading(false);
             }

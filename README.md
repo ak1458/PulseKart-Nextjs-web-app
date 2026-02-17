@@ -321,6 +321,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - GitHub: [@ak1458](https://github.com/ak1458)
 
+## ⚖️ Legal & Community
+
+- [License](LICENSE)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+
 ## 🙏 Acknowledgments
 
 - Next.js team for the amazing framework

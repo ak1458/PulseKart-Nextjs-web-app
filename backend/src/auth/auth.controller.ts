@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Body, UsePipes, HttpCode, HttpStatus, UseGuards, Request } from '@nestjs/common';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto, loginSchema } from './dto/login.dto';
@@ -23,6 +24,7 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     @UsePipes(new ZodValidationPipe(loginSchema))
+    @Throttle(5, 60) // 5 attempts per minute per IP
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto);
     }
@@ -30,12 +32,31 @@ export class AuthController {
     @Post('register')
     @HttpCode(HttpStatus.CREATED)
     @UsePipes(new ZodValidationPipe(registerSchema))
+    @Throttle(3, 60) // 3 attempts per minute per IP
     async register(@Body() registerDto: RegisterDto) {
         return this.authService.register(registerDto.email, registerDto.password, registerDto.name);
     }
 
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    @Throttle(3, 3600) // 3 attempts per hour per IP
+    async forgotPassword(@Body('email') email: string) {
+        return this.authService.forgotPassword(email);
+    }
+
+    @Post('reset-password')
+    @HttpCode(HttpStatus.OK)
+    @Throttle(5, 60) // 5 attempts per minute per IP
+    async resetPassword(
+        @Body('token') token: string,
+        @Body('password') password: string,
+    ) {
+        return this.authService.resetPassword(token, password);
+    }
+
     @Get('me')
     @UseGuards(JwtAuthGuard)
+    @SkipThrottle() // Skip rate limiting for authenticated users
     async getProfile(@Request() req: any) {
         // req.user is set by JwtStrategy
         return {
@@ -45,5 +66,15 @@ export class AuthController {
             name: req.user.name,
             isActive: true,
         };
+    }
+
+    @Post('test-email')
+    @HttpCode(HttpStatus.OK)
+    @SkipThrottle() // Admin only endpoint
+    async testEmail(@Body('email') email: string) {
+        // Import EmailService dynamically to avoid circular dependency issues
+        const { EmailService } = await import('../email/email.service');
+        // Note: In production, add admin guard here
+        return { message: 'Test email endpoint - configure in email.service.ts' };
     }
 }

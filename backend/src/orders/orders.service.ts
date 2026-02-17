@@ -4,7 +4,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, Between } from 'typeorm';
+import { Repository, Like, Between, DataSource } from 'typeorm';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -18,37 +18,45 @@ export class OrdersService {
         private readonly orderRepository: Repository<Order>,
         @InjectRepository(OrderItem)
         private readonly orderItemRepository: Repository<OrderItem>,
+        private readonly dataSource: DataSource,
     ) { }
 
     async create(createOrderDto: CreateOrderDto): Promise<Order> {
         const { items, ...orderData } = createOrderDto;
 
-        // Calculate items count
-        const itemsCount = items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        // Use transaction to ensure atomicity
+        return this.dataSource.transaction(async (manager) => {
+            // Calculate items count
+            const itemsCount = items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
-        // Create order
-        const order = this.orderRepository.create({
-            ...orderData,
-            itemsCount,
-            status: orderData.status || OrderStatus.CREATED,
-            paymentStatus: orderData.paymentStatus || PaymentStatus.PENDING,
+            // Create order
+            const order = manager.create(Order, {
+                ...orderData,
+                itemsCount,
+                status: orderData.status || OrderStatus.CREATED,
+                paymentStatus: orderData.paymentStatus || PaymentStatus.PENDING,
+            });
+
+            const savedOrder = await manager.save(order);
+
+            // Create order items if provided
+            if (items && items.length > 0) {
+                const orderItems = items.map((item) =>
+                    manager.create(OrderItem, {
+                        ...item,
+                        orderId: savedOrder.id,
+                        totalPrice: item.price * item.quantity,
+                    }),
+                );
+                await manager.save(orderItems);
+            }
+
+            // Return the complete order with relations
+            return manager.findOne(Order, {
+                where: { id: savedOrder.id },
+                relations: ['user', 'items', 'items.product'],
+            }) as Promise<Order>;
         });
-
-        const savedOrder = await this.orderRepository.save(order);
-
-        // Create order items if provided
-        if (items && items.length > 0) {
-            const orderItems = items.map((item) =>
-                this.orderItemRepository.create({
-                    ...item,
-                    orderId: savedOrder.id,
-                    totalPrice: item.price * item.quantity,
-                }),
-            );
-            await this.orderItemRepository.save(orderItems);
-        }
-
-        return this.findOne(savedOrder.id);
     }
 
     async findAll(filters?: OrderFiltersDto): Promise<Order[]> {
@@ -114,38 +122,50 @@ export class OrdersService {
     }
 
     async update(id: string, updateOrderDto: UpdateOrderDto): Promise<Order> {
-        const order = await this.findOne(id);
         const { items, ...orderData } = updateOrderDto;
 
-        // Update order fields
-        Object.assign(order, orderData);
+        // Use transaction for atomic updates
+        return this.dataSource.transaction(async (manager) => {
+            // Find order within transaction
+            const order = await manager.findOne(Order, {
+                where: { id },
+                relations: ['items'],
+            });
 
-        // Update items count if items provided
-        if (items) {
-            order.itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            if (!order) {
+                throw new NotFoundException(`Order with ID "${id}" not found`);
+            }
 
-            // Remove existing items and create new ones
-            await this.orderItemRepository.delete({ orderId: id });
+            // Update order fields
+            Object.assign(order, orderData);
 
-            const orderItems = items.map((item) =>
-                this.orderItemRepository.create({
-                    ...item,
-                    orderId: id,
-                    totalPrice: item.price * item.quantity,
-                }),
-            );
-            await this.orderItemRepository.save(orderItems);
-        }
+            // Update items count if items provided
+            if (items) {
+                order.itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-        // Update timestamps based on status changes
-        if (orderData.status === OrderStatus.SHIPPED && !order.shippedAt) {
-            order.shippedAt = new Date();
-        }
-        if (orderData.status === OrderStatus.DELIVERED && !order.deliveredAt) {
-            order.deliveredAt = new Date();
-        }
+                // Remove existing items and create new ones
+                await manager.delete(OrderItem, { orderId: id });
 
-        return this.orderRepository.save(order);
+                const orderItems = items.map((item) =>
+                    manager.create(OrderItem, {
+                        ...item,
+                        orderId: id,
+                        totalPrice: item.price * item.quantity,
+                    }),
+                );
+                await manager.save(orderItems);
+            }
+
+            // Update timestamps based on status changes
+            if (orderData.status === OrderStatus.SHIPPED && !order.shippedAt) {
+                order.shippedAt = new Date();
+            }
+            if (orderData.status === OrderStatus.DELIVERED && !order.deliveredAt) {
+                order.deliveredAt = new Date();
+            }
+
+            return manager.save(order);
+        });
     }
 
     async remove(id: string): Promise<void> {

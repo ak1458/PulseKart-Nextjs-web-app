@@ -126,4 +126,12 @@ export class UsersService {
         });
         return user || null;
     }
+
+    /**
+     * Update user password directly (for password reset)
+     */
+    async updatePassword(userId: number, newPassword: string): Promise<void> {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await this.userRepository.update(userId, { password: hashedPassword });
+    }
 }

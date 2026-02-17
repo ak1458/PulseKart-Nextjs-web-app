@@ -120,6 +120,13 @@ export default function AuthMiddleware({ children }: AuthMiddlewareProps) {
         const token = getAuthToken();
         if (!token) return false;
 
+        // Check if we validated recently (within last 5 minutes)
+        const lastValidated = sessionStorage.getItem('last_token_validation');
+        const now = Date.now();
+        if (lastValidated && now - parseInt(lastValidated, 10) < 5 * 60 * 1000) {
+            return true; // Token was valid recently
+        }
+
         try {
             const response = await fetch(apiUrl('auth/me'), {
                 headers: {
@@ -127,7 +134,13 @@ export default function AuthMiddleware({ children }: AuthMiddlewareProps) {
                     'Content-Type': 'application/json',
                 },
             });
-            return response.ok;
+            
+            if (response.ok) {
+                // Store validation timestamp
+                sessionStorage.setItem('last_token_validation', now.toString());
+                return true;
+            }
+            return false;
         } catch {
             return false;
         }

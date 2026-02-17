@@ -228,17 +228,52 @@ function CheckoutPageContent() {
         }, 2000);
     };
 
+    // Valid file types for prescription upload
+    const VALID_PRESCRIPTION_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    const validatePrescriptionFile = (file: File): string | null => {
+        if (!file) return 'No file selected';
+        if (!VALID_PRESCRIPTION_TYPES.includes(file.type)) {
+            return 'Invalid file type. Please upload JPG, PNG, or PDF';
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            return 'File too large. Maximum size is 5MB';
+        }
+        return null;
+    };
+
     const handleRxUpload = async (file: File) => {
         if (isUploading || isRxUploaded || !file) return;
+        
+        // Validate file
+        const validationError = validatePrescriptionFile(file);
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
         setIsUploading(true);
-        // TODO: Implement actual file upload to server
-        // const formData = new FormData();
-        // formData.append('prescription', file);
-        // await fetch('/api/upload-prescription', { method: 'POST', body: formData });
-        setTimeout(() => {
+        setError(null);
+
+        try {
+            // TODO: Implement actual file upload to server
+            // const formData = new FormData();
+            // formData.append('prescription', file);
+            // const response = await fetch('/api/upload-prescription', { 
+            //     method: 'POST', 
+            //     body: formData 
+            // });
+            // if (!response.ok) throw new Error('Upload failed');
+            
+            // Simulate upload delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
             setIsRxUploaded(true);
+        } catch (err) {
+            setError('Failed to upload prescription. Please try again.');
+        } finally {
             setIsUploading(false);
-        }, 1500);
+        }
     };
 
     // Empty cart check

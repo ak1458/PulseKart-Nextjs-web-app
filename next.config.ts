@@ -70,9 +70,9 @@ const nextConfig: NextConfig = {
     },
 };
 
-// ESLint configuration - allow build even with ESLint errors
+// ESLint configuration - enforce checks during build
 (nextConfig as unknown as Record<string, unknown>).eslint = {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
 };
 
 export default nextConfig;

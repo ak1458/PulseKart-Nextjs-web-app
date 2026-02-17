@@ -20,8 +20,12 @@ export class AdminSeedService implements OnModuleInit {
 
     private async seedAdminUser() {
         try {
-            // Get admin password from env or use default for dev
-            const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+            // Get admin password from env - no fallback for security
+            const adminPassword = process.env.ADMIN_PASSWORD;
+            if (!adminPassword) {
+                this.logger.error('ADMIN_PASSWORD environment variable is required. Admin user will not be created.');
+                return;
+            }
             const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
             // Check if admin already exists
