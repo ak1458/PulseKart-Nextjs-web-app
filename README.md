@@ -286,6 +286,7 @@ For detailed schema, see [schema.sql](./backend/src/db/schema.sql)
 ## 🤝 Contributing
 
 **New to the project?** Start here:
+
 - 📚 [Project Structure](./PROJECT_STRUCTURE.md) - Understand the codebase
 - 🎯 [Contributing Guide](./CONTRIBUTING.md) - How to make changes
 - 🚀 [Deployment Guide](./DEPLOYMENT.md) - How to deploy
@@ -303,11 +304,12 @@ For detailed schema, see [schema.sql](./backend/src/db/schema.sql)
 
 ### Deploy on Render (Recommended)
 
-One-click deployment using Blueprint:
+We use Render for a unified, simple deployment suitable for startups.
+Everything (Frontend, Backend, Database) runs on one platform.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
-Or follow the [step-by-step deployment guide](./DEPLOYMENT.md).
+👉 **[Read the Deployment Guide](./DEPLOYMENT.md)**
 
 ## 📝 License
 

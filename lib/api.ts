@@ -5,7 +5,17 @@
  * In production, set NEXT_PUBLIC_API_URL to your actual API endpoint
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const getApiBaseUrl = () => {
+    let url = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+    // Handle Render's host-only output (e.g. 'pulsekart-api.onrender.com')
+    if (url !== '/api/v1') {
+        if (!url.startsWith('http')) url = `https://${url}`;
+        if (!url.endsWith('/v1')) url = `${url}/v1`;
+    }
+    return url;
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Build a full API URL for the given path

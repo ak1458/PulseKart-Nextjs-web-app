@@ -1,94 +1,46 @@
-# PulseKart - Render Deployment Blueprint
-# Perfect for startups - One click deploy everything!
+version: "1"
 
 services:
-  # Frontend + Backend (Next.js with API routes)
+  # Backend API Service
   - type: web
-    name: pulsekart
+    name: pulsekart-api
     runtime: node
     plan: free
-    branch: refactor/cleanup-and-optimization
-    buildCommand: |
-      # Install dependencies
-      npm install
-      cd backend && npm install && cd ..
-      
-      # Build backend
-      cd backend && npm run build && cd ..
-      
-      # Build frontend  
-      npm run build
-    startCommand: |
-      # Start backend in background
-      cd backend && npm run start:prod &
-      
-      # Start frontend
-      npm start
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: pulsekart
-          type: web
-          property: host
+      - key: PORT
+        value: 10000
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
         fromDatabase:
           name: pulsekart-db
           property: connectionString
-    disk:
-      name: uploads
-      mountPath: /uploads
-      sizeGB: 1
+      - key: ALLOWED_ORIGINS
+        value: "*" # Allow all origins for simplicity (or changing domains)
 
-  # Alternative: Separate services (better for scaling)
-  # Uncomment below and comment above for production setup
-  
-  # # Backend API
-  # - type: web
-  #   name: pulsekart-api
-  #   runtime: node
-  #   plan: free
-  #   rootDir: backend
-  #   buildCommand: npm install && npm run build
-  #   startCommand: npm run start:prod
-  #   envVars:
-  #     - key: NODE_ENV
-  #       value: production
-  #     - key: PORT
-  #       value: 10000
-  #     - key: JWT_SECRET
-  #       generateValue: true
-  #     - key: DATABASE_URL
-  #       fromDatabase:
-  #         name: pulsekart-db
-  #         property: connectionString
-  #     - key: CORS_ORIGINS
-  #       value: https://pulsekart.onrender.com
-
-  # # Frontend
-  # - type: web
-  #   name: pulsekart-web
-  #   runtime: node
-  #   plan: free
-  #   buildCommand: npm install && npm run build
-  #   startCommand: npm start
-  #   envVars:
-  #     - key: NODE_ENV
-  #       value: production
-  #     - key: NEXT_PUBLIC_API_URL
-  #       fromService:
-  #         name: pulsekart-api
-  #         type: web
-  #         property: host
+  # Frontend Web Service
+  - type: web
+    name: pulsekart-web
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: pulsekart-api
+          type: web
+          property: host
 
 databases:
   - name: pulsekart-db
     databaseName: pulsekart
     user: pulsekart
     plan: free
-    # 1GB storage, perfect for startups
-    # Auto-backups daily
-    # Upgrade when you have 1000+ users

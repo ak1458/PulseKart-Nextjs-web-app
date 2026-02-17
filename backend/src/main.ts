@@ -15,7 +15,8 @@ async function bootstrap() {
             // Allow requests with no origin (mobile apps, curl, etc.)
             if (!origin) return callback(null, true);
 
-            if (allowedOrigins.includes(origin)) {
+            // Allow wildcard for easier dev/startup usage, or specific matches
+            if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
