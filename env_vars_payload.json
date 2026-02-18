@@ -1,0 +1,46 @@
+[
+    {
+        "key":  "FROM_EMAIL",
+        "value":  "2easytech01@gmail.com"
+    },
+    {
+        "key":  "FRONTEND_URL",
+        "value":  "https://pulsekart.in"
+    },
+    {
+        "key":  "NODE_ENV",
+        "value":  "production"
+    },
+    {
+        "key":  "ADMIN_PASSWORD",
+        "value":  "a4800ea1-d9b9-48b6-9e8f-9bf42f9a8480Admin!"
+    },
+    {
+        "key":  "ALLOWED_ORIGINS",
+        "value":  "*"
+    },
+    {
+        "key":  "SENDGRID_API_KEY",
+        "value":  "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"
+    },
+    {
+        "key":  "PORT",
+        "value":  "10000"
+    },
+    {
+        "key":  "EMAIL_PROVIDER",
+        "value":  "sendgrid"
+    },
+    {
+        "key":  "JWT_SECRET",
+        "value":  "92154758-f1c7-4bf1-8b02-ad5dec4f873b6b82f587-3fc7-4da5-aced-5562ad0c71a9"
+    },
+    {
+        "key":  "COMPANY_NAME",
+        "value":  "PulseKart"
+    },
+    {
+        "key":  "DATABASE_URL",
+        "value":  "postgresql://pulsekart_db_user:Ky0NfqxbL2iesPrjBr3c1adEvBJUOz3s@dpg-d69enqh4tr6s73ck9e0g-a/pulsekart_db"
+    }
+]

@@ -21,7 +21,7 @@ services:
           name: pulsekart-db
           property: connectionString
       - key: ALLOWED_ORIGINS
-        value: "*" # Allow all origins for simplicity (or changing domains)
+        value: "https://pulsekart-web.onrender.com"
 
   # Frontend Web Service
   - type: web

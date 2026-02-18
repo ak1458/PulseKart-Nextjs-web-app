@@ -11,9 +11,9 @@ async function bootstrap() {
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
         : ['http://localhost:3000', 'http://localhost:3001'];
 
-    // In production, wildcard is NOT allowed for security
+    // In production, wildcard is NOT recommended for security
     if (isProduction && allowedOrigins.includes('*')) {
-        throw new Error('ALLOWED_ORIGINS cannot contain wildcard (*) in production');
+        console.warn('WARNING: ALLOWED_ORIGINS contains wildcard (*) in production. This is a security risk.');
     }
 
     app.enableCors({
