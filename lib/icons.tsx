@@ -38,6 +38,7 @@ import {
     IconEdit as TablerEdit,
     IconExternalLink as TablerExternalLink,
     IconEye as TablerEye,
+    IconEyeOff as TablerEyeOff,
     IconFileText as TablerFileText,
     IconFilter as TablerFilter,
     IconFlask as TablerFlaskConical,
@@ -160,6 +161,7 @@ export const Edit = withDefaults(TablerEdit);
 export const Edit2 = withDefaults(TablerEdit);
 export const ExternalLink = withDefaults(TablerExternalLink);
 export const Eye = withDefaults(TablerEye);
+export const EyeOff = withDefaults(TablerEyeOff);
 export const FileText = withDefaults(TablerFileText);
 export const Filter = withDefaults(TablerFilter);
 export const FlaskConical = withDefaults(TablerFlaskConical);
