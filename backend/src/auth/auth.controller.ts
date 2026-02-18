@@ -24,7 +24,7 @@ export class AuthController {
     @Post('login')
     @HttpCode(HttpStatus.OK)
     @UsePipes(new ZodValidationPipe(loginSchema))
-    @Throttle(5, 60) // 5 attempts per minute per IP
+    @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute per IP
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto);
     }
@@ -32,21 +32,21 @@ export class AuthController {
     @Post('register')
     @HttpCode(HttpStatus.CREATED)
     @UsePipes(new ZodValidationPipe(registerSchema))
-    @Throttle(3, 60) // 3 attempts per minute per IP
+    @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 attempts per minute per IP
     async register(@Body() registerDto: RegisterDto) {
         return this.authService.register(registerDto.email, registerDto.password, registerDto.name);
     }
 
     @Post('forgot-password')
     @HttpCode(HttpStatus.OK)
-    @Throttle(3, 3600) // 3 attempts per hour per IP
+    @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 attempts per hour per IP
     async forgotPassword(@Body('email') email: string) {
         return this.authService.forgotPassword(email);
     }
 
     @Post('reset-password')
     @HttpCode(HttpStatus.OK)
-    @Throttle(5, 60) // 5 attempts per minute per IP
+    @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute per IP
     async resetPassword(
         @Body('token') token: string,
         @Body('password') password: string,
@@ -72,8 +72,6 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @SkipThrottle() // Admin only endpoint
     async testEmail(@Body('email') email: string) {
-        // Import EmailService dynamically to avoid circular dependency issues
-        const { EmailService } = await import('../email/email.service');
         // Note: In production, add admin guard here
         return { message: 'Test email endpoint - configure in email.service.ts' };
     }
