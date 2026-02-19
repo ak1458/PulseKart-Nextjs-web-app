@@ -16,7 +16,7 @@ export class OrderItem {
     @Column({ name: 'order_id' })
     orderId: string;
 
-    @ManyToOne(() => Order, (order) => order.id, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'order_id' })
     order: Order;
 

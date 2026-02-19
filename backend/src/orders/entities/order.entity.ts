@@ -39,8 +39,8 @@ export class Order {
     @JoinColumn({ name: 'user_id' })
     user: User | null;
 
-    @Column({ name: 'product_id', nullable: true }) // Assuming productId can be null
-    productId: number | null;
+    @OneToMany(() => OrderItem, (item) => item.order)
+    items: OrderItem[];
 
     @Column({ name: 'guest_email', type: 'varchar', nullable: true })
     guestEmail: string | null;

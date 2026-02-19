@@ -1,0 +1,2 @@
+Checking status for deploy: dep-d6bbm0d6ubrc73cgjfp0
+Status: update_failed | Updated: 2026-02-19T07:27:22.174311Z
