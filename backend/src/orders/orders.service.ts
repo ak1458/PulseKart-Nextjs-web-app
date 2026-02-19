@@ -32,6 +32,7 @@ export class OrdersService {
             // Create order
             const order = manager.create(Order, {
                 ...orderData,
+                userId: orderData.userId ? String(orderData.userId) : null,
                 itemsCount,
                 status: orderData.status || OrderStatus.CREATED,
                 paymentStatus: orderData.paymentStatus || PaymentStatus.PENDING,
@@ -44,6 +45,7 @@ export class OrdersService {
                 const orderItems = items.map((item) =>
                     manager.create(OrderItem, {
                         ...item,
+                        productId: String(item.productId),
                         orderId: savedOrder.id,
                         totalPrice: item.price * item.quantity,
                     }),
@@ -137,7 +139,11 @@ export class OrdersService {
             }
 
             // Update order fields
-            Object.assign(order, orderData);
+            const { userId, ...fieldsToUpdate } = orderData;
+            if (userId) {
+                order.userId = String(userId);
+            }
+            Object.assign(order, fieldsToUpdate);
 
             // Update items count if items provided
             if (items) {
@@ -149,6 +155,7 @@ export class OrdersService {
                 const orderItems = items.map((item) =>
                     manager.create(OrderItem, {
                         ...item,
+                        productId: String(item.productId),
                         orderId: id,
                         totalPrice: item.price * item.quantity,
                     }),
