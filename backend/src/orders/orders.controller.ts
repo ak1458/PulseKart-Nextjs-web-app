@@ -103,7 +103,9 @@ export class OrdersController {
      * Create a new order
      */
     @Post()
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @Post()
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.CREATED)
     @HttpCode(HttpStatus.CREATED)
     async create(@Body(new ValidationPipe({ transform: true })) createOrderDto: CreateOrderDto): Promise<Order> {
         return this.ordersService.create(createOrderDto);
