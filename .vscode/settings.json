@@ -1,3 +1,5 @@
 {
+    "kimi.yoloMode": true,
+    "antigravity.agent.terminal.autoExecution": "always",
     "chatgpt.openOnStartup": true
 }

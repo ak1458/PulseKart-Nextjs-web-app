@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product } from './entities/product.entity';
-import { Stock } from './entities/stock.entity';
+import { Batch } from './entities/batch.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 
 export interface ProductWithStock extends Product {
@@ -14,8 +14,8 @@ export class ProductsService {
     constructor(
         @InjectRepository(Product)
         private productRepository: Repository<Product>,
-        @InjectRepository(Stock)
-        private stockRepository: Repository<Stock>,
+        @InjectRepository(Batch)
+        private batchRepository: Repository<Batch>,
         private dataSource: DataSource,
     ) { }
 
@@ -29,23 +29,25 @@ export class ProductsService {
             p.sku = createProductDto.sku;
             p.title = createProductDto.title;
             p.category = createProductDto.category;
-            p.description = createProductDto.description;
+            p.description = createProductDto.description || '';
             p.price = createProductDto.price;
             p.mrp = createProductDto.mrp;
-            p.tax_rate = createProductDto.tax_rate;
-            p.prescription_required = createProductDto.prescription_required;
-            p.attributes = createProductDto.attributes;
-            p.images = createProductDto.images;
-            p.seo = createProductDto.seo;
+            p.tax_rate = createProductDto.tax_rate || 0;
+            p.prescription_required = createProductDto.prescription_required || false;
+            p.attributes = createProductDto.attributes || {};
+            p.images = createProductDto.images || [];
+            p.seo = createProductDto.seo || {};
 
             const savedProduct = await queryRunner.manager.save(p);
 
-            // Create initial stock record
-            const stock = new Stock();
-            stock.productId = savedProduct.id;
-            stock.qty_available = createProductDto.stock || 0;
-            stock.batch_number = 'INITIAL';
-            await queryRunner.manager.save(stock);
+            // Create initial batch record for stock
+            const batch = new Batch();
+            batch.sku_id = savedProduct.id;
+            batch.qty_available = createProductDto.stock || 0;
+            batch.batch_no = 'INITIAL';
+            batch.warehouse_id = 1; // Default warehouse
+            batch.expiry_date = new Date(new Date().setFullYear(new Date().getFullYear() + 2)); // 2 years from now
+            await queryRunner.manager.save(batch);
 
             await queryRunner.commitTransaction();
             return savedProduct;
@@ -121,15 +123,15 @@ export class ProductsService {
             price: Number(raw.p_price),
             mrp: Number(raw.p_mrp),
             tax_rate: Number(raw.p_tax_rate),
-            prescription_required: raw.p_prescription_required === 'true',
+            prescription_required: !!raw.p_prescription_required,
             attributes: raw.p_attributes,
             images: raw.p_images,
             seo: raw.p_seo,
-            is_active: raw.p_is_active === 'true',
+            is_active: !!raw.p_is_active,
             created_at: raw.p_created_at as Date,
             updated_at: raw.p_updated_at as Date,
             stock: Number(raw.stock || 0),
-        }));
+        })) as any;
     }
 
     async findOne(id: number): Promise<ProductWithStock | null> {
@@ -169,15 +171,15 @@ export class ProductsService {
             price: Number(raw.p_price),
             mrp: Number(raw.p_mrp),
             tax_rate: Number(raw.p_tax_rate),
-            prescription_required: raw.p_prescription_required === 'true',
+            prescription_required: !!raw.p_prescription_required,
             attributes: raw.p_attributes,
             images: raw.p_images,
             seo: raw.p_seo,
-            is_active: raw.p_is_active === 'true',
+            is_active: !!raw.p_is_active,
             created_at: raw.p_created_at as Date,
             updated_at: raw.p_updated_at as Date,
             stock: Number(raw.stock || 0),
-        };
+        } as any;
     }
 
     async remove(id: number): Promise<void> {
