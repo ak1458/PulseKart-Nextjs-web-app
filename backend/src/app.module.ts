@@ -49,11 +49,15 @@ import { OrderItem } from './orders/entities/order-item.entity';
         }),
         TypeOrmModule.forRoot({
             type: 'postgres',
-            host: process.env.POSTGRES_HOST || '127.0.0.1',
-            port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
-            username: process.env.POSTGRES_USER || 'pulse_user',
-            password: process.env.POSTGRES_PASSWORD || 'pulse_password',
-            database: process.env.POSTGRES_DB || 'pulse_db',
+            ...(process.env.DATABASE_URL
+                ? { url: process.env.DATABASE_URL }
+                : {
+                    host: process.env.POSTGRES_HOST || '127.0.0.1',
+                    port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+                    username: process.env.POSTGRES_USER || 'pulse_user',
+                    password: process.env.POSTGRES_PASSWORD || 'pulse_password',
+                    database: process.env.POSTGRES_DB || 'pulse_db',
+                }),
             entities: [
                 // Product entities
                 Product,
