@@ -33,11 +33,14 @@ export class Order {
     id: string;
 
     @Column({ name: 'user_id', nullable: true })
-    userId: string | null;
+    userId: number | null;
 
     @ManyToOne(() => User, { nullable: true })
     @JoinColumn({ name: 'user_id' })
     user: User | null;
+
+    @Column({ name: 'product_id', nullable: true }) // Assuming productId can be null
+    productId: number | null;
 
     @Column({ name: 'guest_email', type: 'varchar', nullable: true })
     guestEmail: string | null;

@@ -21,7 +21,7 @@ export class OrderItem {
     order: Order;
 
     @Column({ name: 'product_id' })
-    productId: string;
+    productId: number;
 
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })

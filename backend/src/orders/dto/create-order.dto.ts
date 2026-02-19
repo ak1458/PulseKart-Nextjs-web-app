@@ -12,8 +12,8 @@ import { Type } from 'class-transformer';
 import { OrderStatus, PaymentStatus } from '../entities/order.entity';
 
 export class CreateOrderItemDto {
-    @IsString()
-    productId: string;
+    @IsNumber()
+    productId: number;
 
     @IsString()
     name: string;
@@ -37,8 +37,8 @@ export class CreateOrderItemDto {
 
 export class CreateOrderDto {
     @IsOptional()
-    @IsString()
-    userId?: string;
+    @IsNumber()
+    userId?: number;
 
     @IsOptional()
     @IsString()

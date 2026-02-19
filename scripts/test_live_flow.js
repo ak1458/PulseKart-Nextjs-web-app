@@ -44,7 +44,9 @@ async function main() {
                 email: ADMIN_EMAIL,
                 password: ADMIN_PASSWORD
             });
-            adminToken = adminAuth.accessToken;
+            console.log('Admin Auth Response:', JSON.stringify(adminAuth, null, 2));
+            adminToken = adminAuth.access_token || adminAuth.accessToken || adminAuth.token;
+            console.log('Extracted Admin Token:', adminToken ? 'Present' : 'Missing');
             console.log('✅ Admin Logged In');
         } catch (e) {
             console.error('⚠️ Admin Login Failed:', e.message);
@@ -92,7 +94,9 @@ async function main() {
             email: CUSTOMER_EMAIL,
             password: CUSTOMER_PASSWORD
         });
-        customerToken = customerAuth.accessToken;
+        console.log('Customer Auth Response:', JSON.stringify(customerAuth, null, 2));
+        customerToken = customerAuth.access_token || customerAuth.accessToken || customerAuth.token;
+        console.log('Extracted Customer Token:', customerToken ? 'Present' : 'Missing');
         customerId = customerAuth.user?.id || customerAuth.userId; // Adjust based on actual response structure
         console.log('✅ Customer Logged In');
 
@@ -101,17 +105,17 @@ async function main() {
         // ----------------------------------------------------------------
         console.log('\n🛒 [4/6] Placing Order...');
         const orderPayload = {
-            userId: customerId, // Might be inferred from token, but sending if DTO allows
+            userId: Number(customerId), // DTO expects number
             items: [
                 {
-                    productId: String(createdProductId), // DTO expects string for productId
+                    productId: Number(createdProductId), // DTO expects number
                     quantity: 2,
                     price: 50.00,
                     name: 'Test Live Product'
                 }
             ],
             totalAmount: 100.00,
-            status: 'pending',
+            status: 'created',
             paymentStatus: 'pending',
             shippingAddress: {
                 street: '123 Test St',
