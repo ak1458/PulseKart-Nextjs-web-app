@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UsePipes, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UsePipes, NotFoundException, UseGuards } from '@nestjs/common';
 import { ProductsService, ProductWithStock } from './products.service';
 import { CreateProductDto, createProductSchema } from './dto/create-product.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -51,5 +51,11 @@ export class ProductsController {
             throw new NotFoundException('Product not found');
         }
         return product;
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, AdminGuard)
+    async remove(@Param('id') id: string) {
+        return this.productsService.remove(+id);
     }
 }
