@@ -33,7 +33,7 @@ export class Order {
     id: string;
 
     @Column({ name: 'user_id', nullable: true })
-    userId: number | null;
+    userId: string | null;
 
     @ManyToOne(() => User, { nullable: true })
     @JoinColumn({ name: 'user_id' })
