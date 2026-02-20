@@ -48,10 +48,13 @@ async function bootstrap() {
         transform: true,
     }));
 
-    // Port configuration
+    // Port configuration (Bind to 0.0.0.0 for Render)
     const port = process.env.PORT || 4000;
-    await app.listen(port);
+    await app.listen(port, '0.0.0.0');
     console.log(`Application is running on: ${await app.getUrl()}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
-bootstrap();
+bootstrap().catch(err => {
+    console.error('Error during application startup:', err);
+    process.exit(1);
+});
