@@ -56,7 +56,7 @@ export default function ConsultPage() {
         setInput('');
 
         // TODO: Implement real API call to backend for AI consultation
-        // eslint-disable-next-line no-console
+
         console.log('User message sent:', input);
     };
 

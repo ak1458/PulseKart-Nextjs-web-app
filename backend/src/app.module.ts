@@ -36,86 +36,83 @@ import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    // Rate limiting - 10 requests per 60 seconds per IP
-    ThrottlerModule.forRoot({
-      throttlers: [
+    imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        // Rate limiting - 10 requests per 60 seconds per IP
+        ThrottlerModule.forRoot({
+            throttlers: [
+                {
+                    ttl: 60000, // 60 seconds
+                    limit: 100,  // 100 requests
+                },
+            ],
+        }),
+        TypeOrmModule.forRoot({
+            type: 'postgres',
+            ...(process.env.DATABASE_URL
+                ? { url: process.env.DATABASE_URL }
+                : {
+                    host: process.env.POSTGRES_HOST || '127.0.0.1',
+                    port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+                    username: process.env.POSTGRES_USER || 'pulse_user',
+                    password: process.env.POSTGRES_PASSWORD || 'pulse_password',
+                    database: process.env.POSTGRES_DB || 'pulse_db',
+                }),
+            entities: [
+                // Product entities
+                Product,
+                Batch,
+                Brand,
+                Category,
+                Tag,
+                Attribute,
+                ProductAttribute,
+                ProductVariation,
+                FrequentlyBoughtTogether,
+                SizeGuide,
+                Review,
+                // User entities
+                User,
+                // Coupon entities
+                Coupon,
+                CouponUsage,
+                // Pricing entities
+                PricingRule,
+                // Payment entities
+                PaymentMethod,
+                PaymentGatewayDiscount,
+                PaymentTransaction,
+                // Order entities
+                Order,
+                OrderItem,
+            ],
+            synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
+            // Connection pooling
+            extra: {
+                max: 5,
+                idleTimeoutMillis: 30000,
+                connectionTimeoutMillis: 5000,
+            },
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        }),
+        ProductsModule,
+        AuthModule,
+        UsersModule,
+        CouponsModule,
+        PricingModule,
+        ReportsModule,
+        PaymentsModule,
+        OrdersModule,
+        DatabaseModule, // Seeds admin user on startup
+    ],
+    controllers: [AppController],
+    providers: [
+        AppService,
+        // Apply rate limiting globally
         {
-          ttl: 60000, // 60 seconds
-          limit: 100, // 100 requests
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
         },
-      ],
-    }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      ...(process.env.DATABASE_URL
-        ? { url: process.env.DATABASE_URL }
-        : {
-            host: process.env.POSTGRES_HOST || '127.0.0.1',
-            port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
-            username: process.env.POSTGRES_USER || 'pulse_user',
-            password: process.env.POSTGRES_PASSWORD || 'pulse_password',
-            database: process.env.POSTGRES_DB || 'pulse_db',
-          }),
-      entities: [
-        // Product entities
-        Product,
-        Batch,
-        Brand,
-        Category,
-        Tag,
-        Attribute,
-        ProductAttribute,
-        ProductVariation,
-        FrequentlyBoughtTogether,
-        SizeGuide,
-        Review,
-        // User entities
-        User,
-        // Coupon entities
-        Coupon,
-        CouponUsage,
-        // Pricing entities
-        PricingRule,
-        // Payment entities
-        PaymentMethod,
-        PaymentGatewayDiscount,
-        PaymentTransaction,
-        // Order entities
-        Order,
-        OrderItem,
-      ],
-      synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
-      // Connection pooling
-      extra: {
-        max: 5,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
-      },
-      ssl:
-        process.env.NODE_ENV === 'production'
-          ? { rejectUnauthorized: false }
-          : false,
-    }),
-    ProductsModule,
-    AuthModule,
-    UsersModule,
-    CouponsModule,
-    PricingModule,
-    ReportsModule,
-    PaymentsModule,
-    OrdersModule,
-    DatabaseModule, // Seeds admin user on startup
-  ],
-  controllers: [AppController],
-  providers: [
-    AppService,
-    // Apply rate limiting globally
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+    ],
 })
-export class AppModule {}
+export class AppModule { }

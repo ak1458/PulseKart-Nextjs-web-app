@@ -9,27 +9,27 @@ import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [
-    UsersModule,
-    EmailModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET');
-        if (!secret) {
-          throw new Error('JWT_SECRET environment variable is required');
-        }
-        return {
-          secret,
-          signOptions: { expiresIn: '7d' },
-        };
-      },
-      inject: [ConfigService],
-    }),
-  ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+    imports: [
+        UsersModule,
+        EmailModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            useFactory: async (configService: ConfigService) => {
+                const secret = configService.get<string>('JWT_SECRET');
+                if (!secret) {
+                    throw new Error('JWT_SECRET environment variable is required');
+                }
+                return {
+                    secret,
+                    signOptions: { expiresIn: '7d' },
+                };
+            },
+            inject: [ConfigService],
+        }),
+    ],
+    controllers: [AuthController],
+    providers: [AuthService, JwtStrategy],
+    exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }
