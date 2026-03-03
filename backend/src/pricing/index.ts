@@ -1,10 +1,10 @@
 // Entities
 export { PricingRule } from './entities/pricing-rule.entity';
 export type {
-    PricingRuleType,
-    PricingRuleConditions,
-    PricingRuleActions,
-    TieredPricingTier,
+  PricingRuleType,
+  PricingRuleConditions,
+  PricingRuleActions,
+  TieredPricingTier,
 } from './entities/pricing-rule.entity';
 
 // DTOs
@@ -15,12 +15,12 @@ export { CalculatePriceDto, CalculateCartDto } from './dto/calculate-price.dto';
 // Service
 export { PricingService } from './pricing.service';
 export type {
-    PriceCalculationContext,
-    PriceCalculationResult,
-    AppliedRule,
-    PriceBreakdownItem,
-    CartItemResult,
-    CartCalculationResult,
+  PriceCalculationContext,
+  PriceCalculationResult,
+  AppliedRule,
+  PriceBreakdownItem,
+  CartItemResult,
+  CartCalculationResult,
 } from './pricing.service';
 
 // Module

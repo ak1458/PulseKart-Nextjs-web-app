@@ -4,266 +4,308 @@ import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 
 export interface EmailConfig {
-    host: string;
-    port: number;
-    secure: boolean;
-    auth: {
-        user: string;
-        pass: string;
-    };
-    from: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+  from: string;
 }
 
 @Injectable()
 export class EmailService {
-    private readonly logger = new Logger(EmailService.name);
-    private transporter: Transporter | null = null;
-    private isConfigured = false;
+  private readonly logger = new Logger(EmailService.name);
+  private transporter: Transporter | null = null;
+  private isConfigured = false;
 
-    constructor(private readonly configService: ConfigService) {
-        this.initializeTransporter();
+  constructor(private readonly configService: ConfigService) {
+    this.initializeTransporter();
+  }
+
+  /**
+   * Initialize the email transporter based on configuration
+   */
+  private initializeTransporter(): void {
+    const provider = this.configService.get<string>('EMAIL_PROVIDER') || 'smtp';
+
+    try {
+      switch (provider.toLowerCase()) {
+        case 'gmail':
+          this.setupGmail();
+          break;
+        case 'sendgrid':
+          this.setupSendGrid();
+          break;
+        case 'mailgun':
+          this.setupMailgun();
+          break;
+        case 'aws':
+        case 'ses':
+          this.setupAWSSES();
+          break;
+        case 'smtp':
+        default:
+          this.setupSMTP();
+          break;
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to initialize email transporter:',
+        error.message,
+      );
+      this.isConfigured = false;
+    }
+  }
+
+  /**
+   * Setup Gmail SMTP
+   * Requires App Password (not regular password)
+   * https://myaccount.google.com/apppasswords
+   */
+  private setupGmail(): void {
+    const user =
+      this.configService.get<string>('GMAIL_USER') ||
+      this.configService.get<string>('SMTP_USER');
+    const pass =
+      this.configService.get<string>('GMAIL_APP_PASSWORD') ||
+      this.configService.get<string>('SMTP_PASS');
+
+    if (!user || !pass) {
+      this.logger.warn(
+        'Gmail configuration incomplete. Set GMAIL_USER and GMAIL_APP_PASSWORD',
+      );
+      return;
     }
 
-    /**
-     * Initialize the email transporter based on configuration
-     */
-    private initializeTransporter(): void {
-        const provider = this.configService.get<string>('EMAIL_PROVIDER') || 'smtp';
-        
-        try {
-            switch (provider.toLowerCase()) {
-                case 'gmail':
-                    this.setupGmail();
-                    break;
-                case 'sendgrid':
-                    this.setupSendGrid();
-                    break;
-                case 'mailgun':
-                    this.setupMailgun();
-                    break;
-                case 'aws':
-                case 'ses':
-                    this.setupAWSSES();
-                    break;
-                case 'smtp':
-                default:
-                    this.setupSMTP();
-                    break;
-            }
-        } catch (error) {
-            this.logger.error('Failed to initialize email transporter:', error.message);
-            this.isConfigured = false;
-        }
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user, pass },
+    });
+
+    this.isConfigured = true;
+    this.logger.log('Gmail SMTP configured successfully');
+  }
+
+  /**
+   * Setup SendGrid SMTP
+   * https://app.sendgrid.com/settings/api_keys
+   */
+  private setupSendGrid(): void {
+    const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
+
+    if (!apiKey) {
+      this.logger.warn(
+        'SendGrid configuration incomplete. Set SENDGRID_API_KEY',
+      );
+      return;
     }
 
-    /**
-     * Setup Gmail SMTP
-     * Requires App Password (not regular password)
-     * https://myaccount.google.com/apppasswords
-     */
-    private setupGmail(): void {
-        const user = this.configService.get<string>('GMAIL_USER') || this.configService.get<string>('SMTP_USER');
-        const pass = this.configService.get<string>('GMAIL_APP_PASSWORD') || this.configService.get<string>('SMTP_PASS');
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'apikey',
+        pass: apiKey,
+      },
+    });
 
-        if (!user || !pass) {
-            this.logger.warn('Gmail configuration incomplete. Set GMAIL_USER and GMAIL_APP_PASSWORD');
-            return;
-        }
+    this.isConfigured = true;
+    this.logger.log('SendGrid SMTP configured successfully');
+  }
 
-        this.transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: { user, pass },
-        });
+  /**
+   * Setup Mailgun SMTP
+   * https://app.mailgun.com/app/account/security/api_keys
+   */
+  private setupMailgun(): void {
+    const user = this.configService.get<string>('MAILGUN_USER');
+    const pass =
+      this.configService.get<string>('MAILGUN_API_KEY') ||
+      this.configService.get<string>('MAILGUN_PASS');
+    const domain = this.configService.get<string>('MAILGUN_DOMAIN');
 
-        this.isConfigured = true;
-        this.logger.log('Gmail SMTP configured successfully');
+    if (!user || !pass) {
+      this.logger.warn(
+        'Mailgun configuration incomplete. Set MAILGUN_USER and MAILGUN_API_KEY',
+      );
+      return;
     }
 
-    /**
-     * Setup SendGrid SMTP
-     * https://app.sendgrid.com/settings/api_keys
-     */
-    private setupSendGrid(): void {
-        const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
-        
-        if (!apiKey) {
-            this.logger.warn('SendGrid configuration incomplete. Set SENDGRID_API_KEY');
-            return;
-        }
+    this.transporter = nodemailer.createTransport({
+      host: `smtp.mailgun.org`,
+      port: 587,
+      secure: false,
+      auth: { user, pass },
+    });
 
-        this.transporter = nodemailer.createTransport({
-            host: 'smtp.sendgrid.net',
-            port: 587,
-            secure: false,
-            auth: {
-                user: 'apikey',
-                pass: apiKey,
-            },
-        });
+    this.isConfigured = true;
+    this.logger.log(
+      `Mailgun SMTP configured successfully (domain: ${domain || 'not set'})`,
+    );
+  }
 
-        this.isConfigured = true;
-        this.logger.log('SendGrid SMTP configured successfully');
+  /**
+   * Setup AWS SES SMTP
+   * https://console.aws.amazon.com/ses/home
+   */
+  private setupAWSSES(): void {
+    const user =
+      this.configService.get<string>('AWS_SES_USER') ||
+      this.configService.get<string>('AWS_ACCESS_KEY_ID');
+    const pass =
+      this.configService.get<string>('AWS_SES_PASSWORD') ||
+      this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
+    const region =
+      this.configService.get<string>('AWS_SES_REGION') ||
+      this.configService.get<string>('AWS_REGION') ||
+      'us-east-1';
+
+    if (!user || !pass) {
+      this.logger.warn(
+        'AWS SES configuration incomplete. Set AWS_SES_USER and AWS_SES_PASSWORD',
+      );
+      return;
     }
 
-    /**
-     * Setup Mailgun SMTP
-     * https://app.mailgun.com/app/account/security/api_keys
-     */
-    private setupMailgun(): void {
-        const user = this.configService.get<string>('MAILGUN_USER');
-        const pass = this.configService.get<string>('MAILGUN_API_KEY') || this.configService.get<string>('MAILGUN_PASS');
-        const domain = this.configService.get<string>('MAILGUN_DOMAIN');
+    this.transporter = nodemailer.createTransport({
+      host: `email-smtp.${region}.amazonaws.com`,
+      port: 587,
+      secure: false,
+      auth: { user, pass },
+    });
 
-        if (!user || !pass) {
-            this.logger.warn('Mailgun configuration incomplete. Set MAILGUN_USER and MAILGUN_API_KEY');
-            return;
-        }
+    this.isConfigured = true;
+    this.logger.log(`AWS SES configured successfully (region: ${region})`);
+  }
 
-        this.transporter = nodemailer.createTransport({
-            host: `smtp.mailgun.org`,
-            port: 587,
-            secure: false,
-            auth: { user, pass },
-        });
+  /**
+   * Setup generic SMTP
+   */
+  private setupSMTP(): void {
+    const host = this.configService.get<string>('SMTP_HOST');
+    const port = this.configService.get<number>('SMTP_PORT') || 587;
+    const user = this.configService.get<string>('SMTP_USER');
+    const pass = this.configService.get<string>('SMTP_PASS');
+    const secure =
+      this.configService.get<string>('SMTP_SECURE') === 'true' || port === 465;
 
-        this.isConfigured = true;
-        this.logger.log(`Mailgun SMTP configured successfully (domain: ${domain || 'not set'})`);
+    if (!host || !user || !pass) {
+      this.logger.warn(
+        'SMTP configuration incomplete. Check SMTP_HOST, SMTP_USER, SMTP_PASS',
+      );
+      this.logger.warn(
+        'Email functionality will be disabled. Password reset links will be logged to console.',
+      );
+      return;
     }
 
-    /**
-     * Setup AWS SES SMTP
-     * https://console.aws.amazon.com/ses/home
-     */
-    private setupAWSSES(): void {
-        const user = this.configService.get<string>('AWS_SES_USER') || this.configService.get<string>('AWS_ACCESS_KEY_ID');
-        const pass = this.configService.get<string>('AWS_SES_PASSWORD') || this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-        const region = this.configService.get<string>('AWS_SES_REGION') || this.configService.get<string>('AWS_REGION') || 'us-east-1';
+    this.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+    });
 
-        if (!user || !pass) {
-            this.logger.warn('AWS SES configuration incomplete. Set AWS_SES_USER and AWS_SES_PASSWORD');
-            return;
-        }
+    this.isConfigured = true;
+    this.logger.log(`SMTP configured successfully (${host}:${port})`);
+  }
 
-        this.transporter = nodemailer.createTransport({
-            host: `email-smtp.${region}.amazonaws.com`,
-            port: 587,
-            secure: false,
-            auth: { user, pass },
-        });
+  /**
+   * Check if email service is properly configured
+   */
+  isEmailConfigured(): boolean {
+    return this.isConfigured && this.transporter !== null;
+  }
 
-        this.isConfigured = true;
-        this.logger.log(`AWS SES configured successfully (region: ${region})`);
+  /**
+   * Send a password reset email
+   */
+  async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    resetToken: string,
+    frontendUrl: string,
+  ): Promise<{ success: boolean; previewUrl?: string; error?: string }> {
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    // If email not configured, log to console and return
+    if (!this.isEmailConfigured()) {
+      this.logger.warn('='.repeat(80));
+      this.logger.warn('EMAIL NOT CONFIGURED - Password Reset Link:');
+      this.logger.warn(`To: ${to}`);
+      this.logger.warn(`Reset URL: ${resetUrl}`);
+      this.logger.warn('='.repeat(80));
+      return {
+        success: false,
+        error: 'Email service not configured',
+        previewUrl: resetUrl,
+      };
     }
 
-    /**
-     * Setup generic SMTP
-     */
-    private setupSMTP(): void {
-        const host = this.configService.get<string>('SMTP_HOST');
-        const port = this.configService.get<number>('SMTP_PORT') || 587;
-        const user = this.configService.get<string>('SMTP_USER');
-        const pass = this.configService.get<string>('SMTP_PASS');
-        const secure = this.configService.get<string>('SMTP_SECURE') === 'true' || port === 465;
+    const fromEmail =
+      this.configService.get<string>('FROM_EMAIL') || 'noreply@pulsekart.com';
+    const companyName =
+      this.configService.get<string>('COMPANY_NAME') || 'PulseKart';
 
-        if (!host || !user || !pass) {
-            this.logger.warn('SMTP configuration incomplete. Check SMTP_HOST, SMTP_USER, SMTP_PASS');
-            this.logger.warn('Email functionality will be disabled. Password reset links will be logged to console.');
-            return;
-        }
+    try {
+      const result = await this.transporter!.sendMail({
+        from: `"${companyName}" <${fromEmail}>`,
+        to,
+        subject: `Password Reset Request - ${companyName}`,
+        html: this.getPasswordResetTemplate(name, resetUrl, companyName),
+        text: this.getPasswordResetText(name, resetUrl, companyName),
+      });
 
-        this.transporter = nodemailer.createTransport({
-            host,
-            port,
-            secure,
-            auth: { user, pass },
-        });
+      this.logger.log(
+        `Password reset email sent to ${to} (MessageId: ${result.messageId})`,
+      );
+      return { success: true };
+    } catch (error) {
+      this.logger.error(
+        `Failed to send password reset email to ${to}:`,
+        error.message,
+      );
 
-        this.isConfigured = true;
-        this.logger.log(`SMTP configured successfully (${host}:${port})`);
+      // Log the link as fallback
+      this.logger.warn('='.repeat(80));
+      this.logger.warn('EMAIL FAILED - Password Reset Link (Fallback):');
+      this.logger.warn(`Reset URL: ${resetUrl}`);
+      this.logger.warn('='.repeat(80));
+
+      return {
+        success: false,
+        error: error.message,
+        previewUrl: resetUrl,
+      };
+    }
+  }
+
+  /**
+   * Send a test email to verify configuration
+   */
+  async sendTestEmail(
+    to: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.isEmailConfigured()) {
+      return { success: false, error: 'Email service not configured' };
     }
 
-    /**
-     * Check if email service is properly configured
-     */
-    isEmailConfigured(): boolean {
-        return this.isConfigured && this.transporter !== null;
-    }
+    const fromEmail =
+      this.configService.get<string>('FROM_EMAIL') || 'noreply@pulsekart.com';
+    const companyName =
+      this.configService.get<string>('COMPANY_NAME') || 'PulseKart';
 
-    /**
-     * Send a password reset email
-     */
-    async sendPasswordResetEmail(
-        to: string,
-        name: string,
-        resetToken: string,
-        frontendUrl: string,
-    ): Promise<{ success: boolean; previewUrl?: string; error?: string }> {
-        const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
-
-        // If email not configured, log to console and return
-        if (!this.isEmailConfigured()) {
-            this.logger.warn('='.repeat(80));
-            this.logger.warn('EMAIL NOT CONFIGURED - Password Reset Link:');
-            this.logger.warn(`To: ${to}`);
-            this.logger.warn(`Reset URL: ${resetUrl}`);
-            this.logger.warn('='.repeat(80));
-            return { 
-                success: false, 
-                error: 'Email service not configured',
-                previewUrl: resetUrl 
-            };
-        }
-
-        const fromEmail = this.configService.get<string>('FROM_EMAIL') || 'noreply@pulsekart.com';
-        const companyName = this.configService.get<string>('COMPANY_NAME') || 'PulseKart';
-
-        try {
-            const result = await this.transporter!.sendMail({
-                from: `"${companyName}" <${fromEmail}>`,
-                to,
-                subject: `Password Reset Request - ${companyName}`,
-                html: this.getPasswordResetTemplate(name, resetUrl, companyName),
-                text: this.getPasswordResetText(name, resetUrl, companyName),
-            });
-
-            this.logger.log(`Password reset email sent to ${to} (MessageId: ${result.messageId})`);
-            return { success: true };
-        } catch (error) {
-            this.logger.error(`Failed to send password reset email to ${to}:`, error.message);
-            
-            // Log the link as fallback
-            this.logger.warn('='.repeat(80));
-            this.logger.warn('EMAIL FAILED - Password Reset Link (Fallback):');
-            this.logger.warn(`Reset URL: ${resetUrl}`);
-            this.logger.warn('='.repeat(80));
-            
-            return { 
-                success: false, 
-                error: error.message,
-                previewUrl: resetUrl 
-            };
-        }
-    }
-
-    /**
-     * Send a test email to verify configuration
-     */
-    async sendTestEmail(to: string): Promise<{ success: boolean; error?: string }> {
-        if (!this.isEmailConfigured()) {
-            return { success: false, error: 'Email service not configured' };
-        }
-
-        const fromEmail = this.configService.get<string>('FROM_EMAIL') || 'noreply@pulsekart.com';
-        const companyName = this.configService.get<string>('COMPANY_NAME') || 'PulseKart';
-
-        try {
-            const result = await this.transporter!.sendMail({
-                from: `"${companyName}" <${fromEmail}>`,
-                to,
-                subject: `Test Email - ${companyName}`,
-                html: `
+    try {
+      const result = await this.transporter!.sendMail({
+        from: `"${companyName}" <${fromEmail}>`,
+        to,
+        subject: `Test Email - ${companyName}`,
+        html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                         <h2 style="color: #0d9488;">Test Email</h2>
                         <p>This is a test email from ${companyName}.</p>
@@ -274,21 +316,27 @@ export class EmailService {
                         </p>
                     </div>
                 `,
-            });
+      });
 
-            this.logger.log(`Test email sent to ${to} (MessageId: ${result.messageId})`);
-            return { success: true };
-        } catch (error) {
-            this.logger.error(`Failed to send test email:`, error.message);
-            return { success: false, error: error.message };
-        }
+      this.logger.log(
+        `Test email sent to ${to} (MessageId: ${result.messageId})`,
+      );
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to send test email:`, error.message);
+      return { success: false, error: error.message };
     }
+  }
 
-    /**
-     * Get HTML template for password reset email
-     */
-    private getPasswordResetTemplate(name: string, resetUrl: string, companyName: string): string {
-        return `
+  /**
+   * Get HTML template for password reset email
+   */
+  private getPasswordResetTemplate(
+    name: string,
+    resetUrl: string,
+    companyName: string,
+  ): string {
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -337,13 +385,17 @@ export class EmailService {
 </body>
 </html>
         `;
-    }
+  }
 
-    /**
-     * Get plain text version for password reset email
-     */
-    private getPasswordResetText(name: string, resetUrl: string, companyName: string): string {
-        return `
+  /**
+   * Get plain text version for password reset email
+   */
+  private getPasswordResetText(
+    name: string,
+    resetUrl: string,
+    companyName: string,
+  ): string {
+    return `
 Hello ${name},
 
 You recently requested to reset your password for your ${companyName} account.
@@ -359,5 +411,5 @@ If you did not request a password reset, please ignore this email or contact sup
 ${companyName}
 This is an automated email, please do not reply.
         `.trim();
-    }
+  }
 }

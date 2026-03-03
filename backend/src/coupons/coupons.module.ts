@@ -6,9 +6,9 @@ import { Coupon } from './entities/coupon.entity';
 import { CouponUsage } from './entities/coupon-usage.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Coupon, CouponUsage])],
-    controllers: [CouponsController],
-    providers: [CouponsService],
-    exports: [CouponsService],
+  imports: [TypeOrmModule.forFeature([Coupon, CouponUsage])],
+  controllers: [CouponsController],
+  providers: [CouponsService],
+  exports: [CouponsService],
 })
-export class CouponsModule { }
+export class CouponsModule {}

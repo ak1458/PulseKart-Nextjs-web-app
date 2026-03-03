@@ -15,16 +15,43 @@ import { SizeGuide } from './entities/size-guide.entity';
 import { Review } from './entities/review.entity';
 
 import {
-    BrandsService,
-    CategoriesService,
-    TagsService,
-    AttributesService,
-    ReviewsService,
-    SizeGuidesService,
-    FrequentlyBoughtTogetherService,
+  BrandsService,
+  CategoriesService,
+  TagsService,
+  AttributesService,
+  ReviewsService,
+  SizeGuidesService,
+  FrequentlyBoughtTogetherService,
 } from './services';
 
 import {
+  BrandsController,
+  CategoriesController,
+  TagsController,
+  AttributesController,
+  ReviewsController,
+  SizeGuidesController,
+  FrequentlyBoughtTogetherController,
+} from './controllers';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      Product,
+      Batch,
+      Brand,
+      Category,
+      Tag,
+      Attribute,
+      ProductAttribute,
+      ProductVariation,
+      FrequentlyBoughtTogether,
+      SizeGuide,
+      Review,
+    ]),
+  ],
+  controllers: [
+    ProductsController,
     BrandsController,
     CategoriesController,
     TagsController,
@@ -32,53 +59,26 @@ import {
     ReviewsController,
     SizeGuidesController,
     FrequentlyBoughtTogetherController,
-} from './controllers';
-
-@Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Product,
-            Batch,
-            Brand,
-            Category,
-            Tag,
-            Attribute,
-            ProductAttribute,
-            ProductVariation,
-            FrequentlyBoughtTogether,
-            SizeGuide,
-            Review,
-        ]),
-    ],
-    controllers: [
-        ProductsController,
-        BrandsController,
-        CategoriesController,
-        TagsController,
-        AttributesController,
-        ReviewsController,
-        SizeGuidesController,
-        FrequentlyBoughtTogetherController,
-    ],
-    providers: [
-        ProductsService,
-        BrandsService,
-        CategoriesService,
-        TagsService,
-        AttributesService,
-        ReviewsService,
-        SizeGuidesService,
-        FrequentlyBoughtTogetherService,
-    ],
-    exports: [
-        ProductsService,
-        BrandsService,
-        CategoriesService,
-        TagsService,
-        AttributesService,
-        ReviewsService,
-        SizeGuidesService,
-        FrequentlyBoughtTogetherService,
-    ],
+  ],
+  providers: [
+    ProductsService,
+    BrandsService,
+    CategoriesService,
+    TagsService,
+    AttributesService,
+    ReviewsService,
+    SizeGuidesService,
+    FrequentlyBoughtTogetherService,
+  ],
+  exports: [
+    ProductsService,
+    BrandsService,
+    CategoriesService,
+    TagsService,
+    AttributesService,
+    ReviewsService,
+    SizeGuidesService,
+    FrequentlyBoughtTogetherService,
+  ],
 })
-export class ProductsModule { }
+export class ProductsModule {}
