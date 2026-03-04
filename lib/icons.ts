@@ -119,9 +119,13 @@ import {
 const DEFAULT_STROKE = 1.75;
 
 type IconProps = TablerIconProps;
-const withDefaults = (Icon: TablerIcon) => (props: IconProps) => {
-    const { stroke, ...rest } = props;
-    return React.createElement(Icon, { stroke: stroke ?? DEFAULT_STROKE, ...rest });
+const withDefaults = (Icon: TablerIcon) => {
+    const WrappedIcon = (props: IconProps) => {
+        const { stroke, ...rest } = props;
+        return React.createElement(Icon, { stroke: stroke ?? DEFAULT_STROKE, ...rest });
+    };
+    WrappedIcon.displayName = `withDefaults(${Icon.displayName || Icon.name || 'Icon'})`;
+    return WrappedIcon;
 };
 
 // Lucide-compatible exports (for easy migration)

@@ -4,17 +4,15 @@ import { useHealthCheck } from '@/lib/health-check';
 import HealthCheckModal from '@/components/ui/HealthCheckModal';
 
 export default function HealthCheckWrapper() {
-    const { showCheckIn, pendingCheckIn, completeCheckIn, dismissCheckIn } = useHealthCheck();
+    const { showCheckIn, pendingCheckIn, dismissCheckIn } = useHealthCheck();
 
-    const handleComplete = () => {
+    const [daysSince, setDaysSince] = React.useState(7);
+
+    React.useEffect(() => {
         if (pendingCheckIn) {
-            completeCheckIn(pendingCheckIn.id);
+            setDaysSince(Math.floor((Date.now() - new Date(pendingCheckIn.date).getTime()) / (1000 * 60 * 60 * 24)));
         }
-    };
-
-    const daysSince = pendingCheckIn
-        ? Math.floor((Date.now() - new Date(pendingCheckIn.date).getTime()) / (1000 * 60 * 60 * 24))
-        : 7;
+    }, [pendingCheckIn]);
 
     return (
         <HealthCheckModal
