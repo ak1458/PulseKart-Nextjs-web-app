@@ -122,11 +122,13 @@ export default function AccountPage() {
 
     const [orders, setOrders] = useState<any[]>([]);
 
-    const handleHealthCheckComplete = () => {
+    const [daysSincePurchase, setDaysSincePurchase] = useState(7);
+
+    useEffect(() => {
         if (pendingCheckIn) {
-            completeCheckIn(pendingCheckIn.id);
+            setDaysSincePurchase(Math.floor((Date.now() - new Date(pendingCheckIn.date).getTime()) / (1000 * 60 * 60 * 24)));
         }
-    };
+    }, [pendingCheckIn]);
 
     return (
         <div className="min-h-screen pt-20 pb-16 px-4">
@@ -142,7 +144,7 @@ export default function AccountPage() {
                 onClose={dismissCheckIn}
                 diseaseName={pendingCheckIn?.diseaseName || 'your condition'}
                 medicineName={pendingCheckIn?.medicineName || 'prescribed medicine'}
-                daysSincePurchase={pendingCheckIn ? Math.floor((Date.now() - new Date(pendingCheckIn.date).getTime()) / (1000 * 60 * 60 * 24)) : 7}
+                daysSincePurchase={daysSincePurchase}
             />
 
             <div className="max-w-5xl mx-auto">
