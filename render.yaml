@@ -10,6 +10,8 @@ services:
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start:prod
     envVars:
+      - key: NODE_VERSION
+        value: 20
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -31,6 +33,8 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 20
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
