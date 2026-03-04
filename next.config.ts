@@ -25,11 +25,10 @@ const nextConfig: NextConfig = {
 
     // API rewrites to backend
     async rewrites() {
-        const backendUrl = process.env.API_URL || 'http://127.0.0.1:4001';
         return [
             {
                 source: '/api/v1/:path*',
-                destination: `${backendUrl}/v1/:path*`,
+                destination: 'http://127.0.0.1:4001/v1/:path*',
             },
         ];
     },
@@ -73,7 +72,7 @@ const nextConfig: NextConfig = {
 
 // ESLint configuration - enforce checks during build
 (nextConfig as unknown as Record<string, unknown>).eslint = {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
 };
 
 export default nextConfig;

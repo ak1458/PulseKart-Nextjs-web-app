@@ -10,8 +10,6 @@ services:
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start:prod
     envVars:
-      - key: NODE_VERSION
-        value: 20
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -33,14 +31,13 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
-      - key: NODE_VERSION
-        value: 20
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        value: "https://pulsekart-api.onrender.com/v1"
-      - key: API_URL
-        value: "http://pulsekart-api:10000"
+        fromService:
+          name: pulsekart-api
+          type: web
+          property: host
 
 databases:
   - name: pulsekart-db
