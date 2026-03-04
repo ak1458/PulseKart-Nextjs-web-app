@@ -38,10 +38,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: pulsekart-api
-          type: web
-          property: host
+        value: "https://pulsekart-api.onrender.com/v1"
+      - key: API_URL
+        value: "http://pulsekart-api:10000"
 
 databases:
   - name: pulsekart-db
