@@ -5,6 +5,7 @@ services:
   - type: web
     name: pulsekart-api
     runtime: node
+    nodeVersion: 20
     plan: free
     rootDir: backend
     buildCommand: npm install --include=dev && npm run build
@@ -27,6 +28,7 @@ services:
   - type: web
     name: pulsekart-web
     runtime: node
+    nodeVersion: 20
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
