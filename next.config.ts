@@ -71,9 +71,4 @@ const nextConfig: NextConfig = {
     },
 };
 
-// ESLint configuration - enforce checks during build
-(nextConfig as unknown as Record<string, unknown>).eslint = {
-    ignoreDuringBuilds: true,
-};
-
 export default nextConfig;
