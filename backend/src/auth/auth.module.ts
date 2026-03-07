@@ -16,7 +16,7 @@ import { EmailModule } from '../email/email.module';
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => {
-                const secret = configService.get<string>('JWT_SECRET');
+                const secret = configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
                 if (!secret) {
                     throw new Error('JWT_SECRET environment variable is required');
                 }

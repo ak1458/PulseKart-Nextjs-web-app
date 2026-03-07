@@ -21,7 +21,7 @@ import { JwtAuthGuard, AdminGuard } from '../auth/jwt-auth.guard';
 
 /**
  * Orders Controller
- * 
+ *
  * Provides CRUD operations for order management:
  * - List orders with filtering and search
  * - Create new orders
@@ -29,7 +29,7 @@ import { JwtAuthGuard, AdminGuard } from '../auth/jwt-auth.guard';
  * - Delete orders
  * - Update order status and payment status
  * - Bulk import orders
- * 
+ *
  * Admin endpoints require JWT authentication and admin privileges.
  */
 @Controller('v1/orders')
@@ -39,7 +39,7 @@ export class OrdersController {
     /**
      * Get all orders
      * Supports filtering by status, payment status, date range, and search
-     * 
+     *
      * Query params:
      * - search: Search by order ID or customer name
      * - status: Filter by order status

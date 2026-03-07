@@ -135,7 +135,7 @@ export class PricingController {
     /**
      * Calculate price for a single product
      * POST /v1/pricing/calculate
-     * 
+     *
      * Example request:
      * {
      *   "productId": 1,
@@ -151,11 +151,11 @@ export class PricingController {
         // In a real implementation, fetch the product price from database
         // For now, this is a simplified version that assumes price is provided
         // or fetched by product service
-        
+
         // Note: In production, you'd inject ProductsService to get the actual price
         // This is a placeholder - you'll need to integrate with your product service
         const basePrice = calculateDto['price'] as number || 0;
-        
+
         if (!basePrice) {
             return {
                 success: false,
@@ -180,7 +180,7 @@ export class PricingController {
     /**
      * Calculate prices for an entire cart
      * POST /v1/pricing/calculate-cart
-     * 
+     *
      * Example request:
      * {
      *   "items": [

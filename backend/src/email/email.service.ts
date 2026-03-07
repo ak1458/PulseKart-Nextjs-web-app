@@ -29,7 +29,7 @@ export class EmailService {
      */
     private initializeTransporter(): void {
         const provider = this.configService.get<string>('EMAIL_PROVIDER') || 'smtp';
-        
+
         try {
             switch (provider.toLowerCase()) {
                 case 'gmail':
@@ -87,7 +87,7 @@ export class EmailService {
      */
     private setupSendGrid(): void {
         const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
-        
+
         if (!apiKey) {
             this.logger.warn('SendGrid configuration incomplete. Set SENDGRID_API_KEY');
             return;
@@ -209,10 +209,10 @@ export class EmailService {
             this.logger.warn(`To: ${to}`);
             this.logger.warn(`Reset URL: ${resetUrl}`);
             this.logger.warn('='.repeat(80));
-            return { 
-                success: false, 
+            return {
+                success: false,
                 error: 'Email service not configured',
-                previewUrl: resetUrl 
+                previewUrl: resetUrl
             };
         }
 
@@ -232,17 +232,17 @@ export class EmailService {
             return { success: true };
         } catch (error) {
             this.logger.error(`Failed to send password reset email to ${to}:`, error.message);
-            
+
             // Log the link as fallback
             this.logger.warn('='.repeat(80));
             this.logger.warn('EMAIL FAILED - Password Reset Link (Fallback):');
             this.logger.warn(`Reset URL: ${resetUrl}`);
             this.logger.warn('='.repeat(80));
-            
-            return { 
-                success: false, 
+
+            return {
+                success: false,
                 error: error.message,
-                previewUrl: resetUrl 
+                previewUrl: resetUrl
             };
         }
     }

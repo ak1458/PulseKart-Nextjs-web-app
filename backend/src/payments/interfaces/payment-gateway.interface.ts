@@ -1,6 +1,6 @@
 /**
  * Payment Gateway Interface
- * 
+ *
  * This interface defines the contract for payment gateway providers.
  * Implement this interface for specific providers like Razorpay, Stripe, etc.
  */
@@ -85,7 +85,7 @@ export interface PaymentGateway {
  */
 export abstract class BasePaymentGateway implements PaymentGateway {
     abstract readonly name: string;
-    
+
     protected config: GatewayConfig | null = null;
     protected initialized = false;
 
@@ -99,9 +99,9 @@ export abstract class BasePaymentGateway implements PaymentGateway {
     }
 
     abstract createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntent>;
-    
+
     abstract verifyPayment(params: VerifyPaymentParams): Promise<PaymentVerificationResult>;
-    
+
     abstract refund(params: RefundParams): Promise<RefundResult>;
 
     protected validateConfig(): GatewayConfig {

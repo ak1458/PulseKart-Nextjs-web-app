@@ -108,7 +108,7 @@ export class AuthService {
 
         // Find user by email
         const user = await this.usersService.findByEmail(email);
-        
+
         // Always return success to prevent email enumeration attacks
         if (!user) {
             this.logger.warn(`Password reset requested for non-existent email: ${email}`);
@@ -118,7 +118,7 @@ export class AuthService {
         // Generate secure random token
         const resetToken = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-        
+
         // Store token with expiration (1 hour)
         const expires = new Date(Date.now() + 60 * 60 * 1000);
         this.resetTokens.set(tokenHash, { userId: user.id, expires });

@@ -88,7 +88,7 @@ export class PaymentTransaction {
      * Check if the payment can be refunded
      */
     canBeRefunded(): boolean {
-        return this.status === 'completed' && 
+        return this.status === 'completed' &&
                (this.refundAmount === null || this.refundAmount === undefined || this.refundAmount < this.amount);
     }
 
@@ -108,11 +108,11 @@ export class PaymentTransaction {
      */
     updateStatus(status: PaymentStatus, errorMessage?: string): void {
         this.status = status;
-        
+
         if (status === 'completed') {
             this.processedAt = new Date();
         }
-        
+
         if (errorMessage) {
             this.errorMessage = errorMessage;
         }

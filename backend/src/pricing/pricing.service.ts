@@ -181,7 +181,7 @@ export class PricingService {
         if (nonStackableRules.length > 0) {
             const bestNonStackable = nonStackableRules[0]; // Already sorted by priority
             const result = this.applyRule(bestNonStackable, basePrice, quantity);
-            
+
             if (result.discount > 0) {
                 totalDiscount += result.discount;
                 appliedRules.push({
@@ -191,7 +191,7 @@ export class PricingService {
                     discountAmount: result.discount,
                     description: result.description,
                 });
-                
+
                 // Add breakdown items
                 breakdown.push(...result.breakdown);
             }
@@ -200,7 +200,7 @@ export class PricingService {
         // Apply all stackable rules
         for (const rule of stackableRules) {
             const result = this.applyRule(rule, basePrice, quantity);
-            
+
             if (result.discount > 0) {
                 totalDiscount += result.discount;
                 appliedRules.push({

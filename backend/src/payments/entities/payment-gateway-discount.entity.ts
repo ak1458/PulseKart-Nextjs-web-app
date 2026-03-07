@@ -63,15 +63,15 @@ export class PaymentGatewayDiscount {
      */
     isValidDate(): boolean {
         const now = new Date();
-        
+
         if (this.startDate && now < this.startDate) {
             return false;
         }
-        
+
         if (this.endDate && now > this.endDate) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -107,7 +107,7 @@ export class PaymentGatewayDiscount {
 
         if (this.discountType === 'percentage') {
             discountAmount = (orderAmount * this.discountValue) / 100;
-            
+
             // Apply max discount cap if set
             if (this.maxDiscountAmount && discountAmount > this.maxDiscountAmount) {
                 discountAmount = this.maxDiscountAmount;
@@ -115,7 +115,7 @@ export class PaymentGatewayDiscount {
         } else {
             // Fixed amount discount
             discountAmount = this.discountValue;
-            
+
             // Fixed discount cannot exceed order amount
             if (discountAmount > orderAmount) {
                 discountAmount = orderAmount;

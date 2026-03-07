@@ -25,14 +25,14 @@ import {
 
 /**
  * Reports Controller
- * 
+ *
  * Provides comprehensive reporting endpoints for:
  * - Sales analytics
  * - Product performance
  * - Customer insights
  * - Inventory status
  * - Financial summaries
- * 
+ *
  * All endpoints require JWT authentication and admin privileges.
  */
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -45,7 +45,7 @@ export class ReportsController {
     /**
      * Get sales report
      * Returns comprehensive sales analytics including revenue, orders, and payment method breakdowns
-     * 
+     *
      * Query params:
      * - startDate: Start date (YYYY-MM-DD)
      * - endDate: End date (YYYY-MM-DD)
@@ -66,7 +66,7 @@ export class ReportsController {
     /**
      * Get product performance report
      * Returns top selling products, low stock alerts, and expiring items
-     * 
+     *
      * Query params:
      * - startDate: Start date (YYYY-MM-DD)
      * - endDate: End date (YYYY-MM-DD)
@@ -85,7 +85,7 @@ export class ReportsController {
     /**
      * Get customer analytics report
      * Returns customer distribution, lifetime values, and top customers
-     * 
+     *
      * Query params:
      * - startDate: Start date (YYYY-MM-DD)
      * - endDate: End date (YYYY-MM-DD)
@@ -116,7 +116,7 @@ export class ReportsController {
     /**
      * Get financial report
      * Returns financial analytics including revenue, refunds, and payment gateway breakdowns
-     * 
+     *
      * Query params:
      * - startDate: Start date (YYYY-MM-DD)
      * - endDate: End date (YYYY-MM-DD)
@@ -147,7 +147,7 @@ export class ReportsController {
     /**
      * Export any report
      * Export sales, products, customers, inventory, or financial reports to CSV, Excel, or JSON format
-     * 
+     *
      * Body:
      * - reportType: 'sales' | 'products' | 'customers' | 'inventory' | 'financial'
      * - format: 'json' | 'csv' | 'excel'
@@ -174,7 +174,7 @@ export class ReportsController {
 
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        
+
         if (typeof data === 'string') {
             res.send(data);
         } else {
