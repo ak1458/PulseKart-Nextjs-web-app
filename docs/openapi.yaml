@@ -5,7 +5,9 @@ info:
   description: API for PulseKart Pharmacy Dashboard & Storefront
 
 servers:
-  - url: http://localhost:8000/v1
+  # The API listens on PORT, defaulting to 4000 (see backend/src/main.ts).
+  # This previously documented port 8000, which nothing has ever served.
+  - url: http://localhost:4000/v1
     description: Local Development Server
 
 paths:

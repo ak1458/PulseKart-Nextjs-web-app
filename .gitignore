@@ -42,3 +42,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated seed fixtures (rebuild with `npm run seed:generate`)
+/scripts/data/
+
+# deploy provider artifacts and captured logs - never commit these
+services.json
+service_id.txt
+deploy_trigger.txt
+*_log*.txt
+register_payload.json
