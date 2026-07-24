@@ -105,8 +105,8 @@ describe('OrdersService', () => {
         const baseDto = (overrides: Partial<CreateOrderDto> = {}): CreateOrderDto => ({
             totalAmount: 0,
             items: [
-                { productId: 'p1', name: 'Paracetamol', price: 19.99, quantity: 3 },
-                { productId: 'p2', name: 'Bandage', price: 5.5, quantity: 2 },
+                { productId: 1, name: 'Paracetamol', price: 19.99, quantity: 3 },
+                { productId: 2, name: 'Bandage', price: 5.5, quantity: 2 },
             ],
             ...overrides,
         }) as CreateOrderDto;
@@ -125,7 +125,7 @@ describe('OrdersService', () => {
         it('rounds to 2dp so the total matches the sum of the persisted lines', async () => {
             // 19.99 * 3 is 59.970000000000006 in binary floating point.
             await service.create(baseDto({ items: [
-                { productId: 'p1', name: 'Paracetamol', price: 19.99, quantity: 3 },
+                { productId: 1, name: 'Paracetamol', price: 19.99, quantity: 3 },
             ] } as Partial<CreateOrderDto>));
 
             expect(createdOrder!.subtotalAmount).toBe(59.97);

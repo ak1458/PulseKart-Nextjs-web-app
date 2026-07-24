@@ -18,6 +18,7 @@ import { ProductAttribute } from './product-attribute.entity';
 import { ProductVariation } from './product-variation.entity';
 import { FrequentlyBoughtTogether } from './frequently-bought-together.entity';
 import { Review } from './review.entity';
+import { moneyTransformer } from '../../common/transformers/decimal.transformer';
 
 export interface ProductDimensions {
     length: number;
@@ -43,13 +44,13 @@ export class Product {
     @Column({ nullable: true })
     category: string;
 
-    @Column('decimal', { precision: 10, scale: 2 })
+    @Column('decimal', { precision: 10, scale: 2, transformer: moneyTransformer })
     price: number;
 
-    @Column('decimal', { precision: 10, scale: 2, nullable: true })
+    @Column('decimal', { precision: 10, scale: 2, nullable: true, transformer: moneyTransformer })
     mrp: number;
 
-    @Column('decimal', { precision: 5, scale: 2, default: 0 })
+    @Column('decimal', { precision: 5, scale: 2, default: 0, transformer: moneyTransformer })
     tax_rate: number;
 
     @Column({ default: false })

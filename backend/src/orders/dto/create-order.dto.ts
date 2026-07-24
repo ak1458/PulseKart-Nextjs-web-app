@@ -1,6 +1,7 @@
 import {
     IsString,
     IsNumber,
+    IsInt,
     IsOptional,
     IsEnum,
     IsObject,
@@ -12,8 +13,10 @@ import { Type } from 'class-transformer';
 import { OrderStatus, PaymentStatus } from '../entities/order.entity';
 
 export class CreateOrderItemDto {
-    @IsString()
-    productId: string;
+    // Integer: products.id is a SERIAL primary key.
+    @IsInt()
+    @Min(1)
+    productId: number;
 
     @IsString()
     name: string;
@@ -36,9 +39,11 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
+    // Integer: users.id is a SERIAL primary key.
     @IsOptional()
-    @IsString()
-    userId?: string;
+    @IsInt()
+    @Min(1)
+    userId?: number;
 
     @IsOptional()
     @IsString()

@@ -188,6 +188,15 @@ export class OrdersService {
         return queryBuilder.getMany();
     }
 
+    /** Orders belonging to one customer, newest first. */
+    async findByUser(userId: number): Promise<Order[]> {
+        return this.orderRepository.find({
+            where: { userId },
+            relations: ['items'],
+            order: { createdAt: 'DESC' },
+        });
+    }
+
     async findOne(id: string): Promise<Order> {
         const order = await this.orderRepository.findOne({
             where: { id },

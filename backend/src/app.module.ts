@@ -34,6 +34,8 @@ import { DatabaseModule } from './database/database.module';
 import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { Prescription } from './prescriptions/entities/prescription.entity';
 
 @Module({
     imports: [
@@ -85,6 +87,8 @@ import { OrderItem } from './orders/entities/order-item.entity';
                 // Order entities
                 Order,
                 OrderItem,
+                // Prescription entities
+                Prescription,
             ],
             synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
             // Connection pooling
@@ -103,6 +107,7 @@ import { OrderItem } from './orders/entities/order-item.entity';
         ReportsModule,
         PaymentsModule,
         OrdersModule,
+        PrescriptionsModule,
         DatabaseModule, // Seeds admin user on startup
     ],
     controllers: [AppController],

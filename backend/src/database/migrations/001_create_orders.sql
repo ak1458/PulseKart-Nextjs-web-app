@@ -1,10 +1,20 @@
 -- Create orders table
+--
+-- NOTE: user_id and product_id are INTEGER, not UUID.
+--
+-- This migration previously declared them as UUID while referencing users(id)
+-- and products(id), both of which are SERIAL integers (the entities use a bare
+-- @PrimaryGeneratedColumn()). Postgres rejects a UUID -> integer foreign key, so
+-- the whole script aborted and the orders tables were never created in any
+-- database. Only orders.id and order_items.id are genuinely UUIDs, matching
+-- @PrimaryGeneratedColumn('uuid') on those two entities.
+
 CREATE TYPE order_status AS ENUM ('created', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded');
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded', 'partially_refunded');
 
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     guest_email VARCHAR(255),
     guest_name VARCHAR(255),
     customer_name VARCHAR(255),
@@ -32,14 +42,18 @@ CREATE TABLE orders (
 CREATE TABLE order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
     name VARCHAR(255) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
-    quantity INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
     total_price DECIMAL(10, 2) NOT NULL,
     attributes JSONB,
     image VARCHAR(500)
 );
+
+-- ON DELETE RESTRICT above is deliberate: order_items are a financial record.
+-- Cascading a product deletion would silently erase line items from historical
+-- orders and leave their totals unexplainable.
 
 -- Create indexes for better query performance
 CREATE INDEX idx_orders_user_id ON orders(user_id);
