@@ -1,0 +1,25 @@
+# PostgreSQL for local development.
+#
+# Port 5433, not 5432, so this does not collide with a Postgres you may already
+# be running for something else.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pulsekart_pos_db
+    environment:
+      POSTGRES_USER: pos
+      POSTGRES_PASSWORD: pos_password
+      POSTGRES_DB: pulsekart_pos
+    ports:
+      - "5433:5432"
+    volumes:
+      - pos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos -d pulsekart_pos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pos_pgdata:
