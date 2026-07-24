@@ -20,6 +20,7 @@ import { Review } from './products/entities/review.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 import { CouponsModule } from './coupons/coupons.module';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
@@ -75,6 +76,7 @@ import { Prescription } from './prescriptions/entities/prescription.entity';
                 Review,
                 // User entities
                 User,
+                PasswordResetToken,
                 // Coupon entities
                 Coupon,
                 CouponUsage,

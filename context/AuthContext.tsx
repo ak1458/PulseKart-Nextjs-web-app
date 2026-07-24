@@ -50,6 +50,8 @@ interface AuthResponse {
 }
 
 // Constants
+/** Must match backend registerSchema / resetPassword. */
+export const MIN_PASSWORD_LENGTH = 8;
 const TOKEN_KEY = 'pulsekart_token';
 const USER_KEY = 'pulsekart_user';
 
@@ -173,8 +175,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Validate password length
-            if (credentials.password.length < 6) {
-                throw new Error('Password must be at least 6 characters');
+            // 8, matching the backend's registerSchema and resetPassword. The
+            // client previously allowed 6, so a 6 or 7 character password
+            // passed here and was then rejected by the server.
+            if (credentials.password.length < MIN_PASSWORD_LENGTH) {
+                throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
             }
 
             const response = await fetch(apiUrl('auth/register'), {

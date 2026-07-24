@@ -58,6 +58,73 @@ export interface CartLineRequest {
     quantity: number;
 }
 
+/** An order as the customer dashboard renders it. */
+export interface CustomerOrder {
+    id: string;
+    date: string;
+    /** Display status: 'Delivered' | 'In Progress' | 'Cancelled' | 'Rx Pending'. */
+    status: string;
+    total: number;
+    payment: string;
+    address: string;
+    items: { name: string; quantity: number; price: number; image: string | null }[];
+    timeline: { label: string; done: boolean }[];
+}
+
+/** Raw order shape returned by the API. */
+interface ApiOrder {
+    id: string;
+    status: string;
+    paymentStatus: string;
+    totalAmount: number;
+    paymentMethod: string | null;
+    prescriptionId: string | null;
+    shippingAddress: Record<string, unknown> | null;
+    createdAt: string;
+    shippedAt: string | null;
+    deliveredAt: string | null;
+    items?: { name: string; quantity: number; price: number; image: string | null }[];
+}
+
+/**
+ * Map an order onto the labels the dashboard filters by.
+ *
+ * The API's statuses are the lifecycle values (`created`, `processing`,
+ * `shipped`…); the UI groups them into four buckets.
+ */
+function toDisplayStatus(order: ApiOrder): string {
+    if (order.status === 'delivered') return 'Delivered';
+    if (order.status === 'cancelled' || order.status === 'refunded') return 'Cancelled';
+    return 'In Progress';
+}
+
+function formatAddress(address: Record<string, unknown> | null): string {
+    if (!address) return 'No delivery address on file';
+    const parts = ['address', 'city', 'pincode']
+        .map(key => address[key])
+        .filter((v): v is string => typeof v === 'string' && v.length > 0);
+    return parts.length > 0 ? parts.join(', ') : 'No delivery address on file';
+}
+
+function normalizeOrder(order: ApiOrder): CustomerOrder {
+    return {
+        id: order.id,
+        date: new Date(order.createdAt).toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric',
+        }),
+        status: toDisplayStatus(order),
+        total: order.totalAmount,
+        payment: order.paymentMethod ?? 'Not specified',
+        address: formatAddress(order.shippingAddress),
+        items: order.items ?? [],
+        timeline: [
+            { label: 'Order placed', done: true },
+            { label: 'Shipped', done: order.shippedAt !== null },
+            { label: 'Delivered', done: order.deliveredAt !== null },
+        ],
+    };
+}
+
 /** Extract a useful message from an error response body. */
 async function toError(response: Response, fallback: string): Promise<Error> {
     try {
@@ -113,6 +180,22 @@ export async function placeOrder(input: {
     }
 
     return response.json();
+}
+
+/** Orders belonging to the signed-in customer, newest first. */
+export async function fetchMyOrders(): Promise<CustomerOrder[]> {
+    if (!isSignedIn()) return [];
+
+    const response = await fetch(apiUrl('orders/mine'), {
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        throw await toError(response, 'Could not load your orders.');
+    }
+
+    const orders: ApiOrder[] = await response.json();
+    return orders.map(normalizeOrder);
 }
 
 /**

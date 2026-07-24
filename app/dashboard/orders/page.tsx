@@ -1,24 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Package, Clock, X, RefreshCw, MapPin, CreditCard } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Orders are loaded from the backend. Keep empty for a clean client-ready view.
-const ORDERS: any[] = [];
+import { fetchMyOrders, type CustomerOrder } from '@/lib/checkout-api';
 
 const FILTERS = ['All', 'Delivered', 'In Progress', 'Cancelled', 'Rx Pending'];
 
 export default function OrdersPage() {
     const [activeFilter, setActiveFilter] = useState('All');
-    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
+
+    // Real orders. This was a module-level `const ORDERS: any[] = []` under a
+    // comment claiming they were "loaded from the backend" - nothing fetched
+    // anything, and no endpoint existed to fetch from until GET /v1/orders/mine.
+    const [orders, setOrders] = useState<CustomerOrder[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        fetchMyOrders()
+            .then(result => { if (!cancelled) setOrders(result); })
+            .catch((err: Error) => { if (!cancelled) setError(err.message); })
+            .finally(() => { if (!cancelled) setIsLoading(false); });
+
+        return () => { cancelled = true; };
+    }, []);
 
     const filteredOrders = activeFilter === 'All'
-        ? ORDERS
-        : ORDERS.filter(o => o.status.toLowerCase() === activeFilter.toLowerCase());
+        ? orders
+        : orders.filter(o => o.status.toLowerCase() === activeFilter.toLowerCase());
 
-    const hasOrders = ORDERS.length > 0;
+    const hasOrders = orders.length > 0;
     const hasFilteredOrders = filteredOrders.length > 0;
 
     return (
@@ -105,10 +121,10 @@ export default function OrdersPage() {
                         <Package className="w-7 h-7" />
                     </div>
                     <h2 className="text-xl font-bold text-white mb-2">
-                        {hasOrders ? 'No orders in this view' : 'No orders yet'}
+                        {isLoading ? 'Loading your orders…' : error ? 'Could not load your orders' : hasOrders ? 'No orders in this view' : 'No orders yet'}
                     </h2>
                     <p className="text-sm text-gray-400 mb-6">
-                        {hasOrders ? 'Try another filter or check back later.' : 'Start shopping to place your first order.'}
+                        {isLoading ? 'One moment.' : error ? error : hasOrders ? 'Try another filter or check back later.' : 'Start shopping to place your first order.'}
                     </p>
                     {hasOrders ? (
                         <button
