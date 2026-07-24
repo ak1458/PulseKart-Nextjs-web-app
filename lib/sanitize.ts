@@ -34,17 +34,25 @@ export function escapeHtml(unsafe: string): string {
  */
 export function sanitizeUrl(url: string): string {
     const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
-    try {
-        const parsed = new URL(url, window.location.origin);
-        if (!allowedProtocols.includes(parsed.protocol)) {
-            return '#';
-        }
+
+    // Relative URLs cannot carry a protocol, so they are safe by construction.
+    // Checked before parsing because this function also runs during SSR.
+    if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
         return url;
+    }
+
+    // On the server there is no `window`. Referencing window.location.origin
+    // unconditionally threw a ReferenceError that the catch below swallowed,
+    // so every absolute URL rendered server-side silently became '#' and then
+    // changed to the real href after hydration.
+    const base = typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost';
+
+    try {
+        const parsed = new URL(url, base);
+        return allowedProtocols.includes(parsed.protocol) ? url : '#';
     } catch {
-        // If URL parsing fails, check if it's a relative URL
-        if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
-            return url;
-        }
         return '#';
     }
 }

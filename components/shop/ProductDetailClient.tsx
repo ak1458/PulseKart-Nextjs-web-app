@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Star, Truck, ShieldCheck, Heart, Minus, Plus, ShoppingCart } from "@/lib/icons";
 import { useCart } from "@/context/CartContext";
 import { getProductImage } from "@/lib/images";
+import { isPrescriptionProduct } from "@/lib/utils";
 
 type Product = {
     id: number;
@@ -31,7 +32,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 name: product.title,
                 price: parseFloat(product.price),
                 image: getProductImage(product.images?.[0]),
-                category: product.category
+                category: product.category,
+                requiresPrescription: isPrescriptionProduct(product),
             });
         }
     };

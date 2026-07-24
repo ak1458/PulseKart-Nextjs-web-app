@@ -68,21 +68,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const initializeAuth = async () => {
             try {
                 const token = localStorage.getItem(TOKEN_KEY);
-                const savedUser = localStorage.getItem(USER_KEY);
 
-                if (token && savedUser) {
-                    // Check if we validated recently (within last 10 minutes)
-                    const lastValidated = sessionStorage.getItem('last_token_validation');
-                    const now = Date.now();
-                    
-                    if (lastValidated && now - parseInt(lastValidated, 10) < 10 * 60 * 1000) {
-                        // Use cached user data if validation was recent
-                        setUser(JSON.parse(savedUser));
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    // Validate token by fetching current user
+                if (token) {
+                    // The identity used for authorization always comes from the
+                    // server. A previous 10-minute cache short-circuited this
+                    // and restored `role` straight out of localStorage, so
+                    // editing that value in devtools was enough to make
+                    // `isAdmin` true and render the entire admin dashboard -
+                    // AdminRoute gates on nothing else.
+                    //
+                    // The stored copy is now only a hint that a session may
+                    // exist; it is never promoted to state.
                     const response = await fetch(apiUrl('auth/me'), {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -93,19 +89,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (response.ok) {
                         const userData: User = await response.json();
                         setUser(userData);
-                        sessionStorage.setItem('last_token_validation', now.toString());
+                        localStorage.setItem(USER_KEY, JSON.stringify(userData));
                     } else {
                         // Token is invalid, clear storage
                         localStorage.removeItem(TOKEN_KEY);
                         localStorage.removeItem(USER_KEY);
-                        sessionStorage.removeItem('last_token_validation');
                     }
                 }
             } catch (err) {
                 // Silent fail - clear storage on error
                 localStorage.removeItem(TOKEN_KEY);
                 localStorage.removeItem(USER_KEY);
-                sessionStorage.removeItem('last_token_validation');
             } finally {
                 setIsLoading(false);
             }
@@ -120,25 +114,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
 
         try {
-            // If social token is provided, use social login endpoint
+            // Social login previously "succeeded" entirely in the browser: it
+            // fabricated a User object from the submitted email, wrote it to
+            // localStorage alongside whatever string was passed as socialToken,
+            // and redirected to /dashboard - without ever contacting the server.
+            // Any caller could mint a session for any address.
+            //
+            // There is no social-login endpoint on the API yet, so this now
+            // fails loudly instead of pretending to work.
             if (credentials.socialToken) {
-                const data: AuthResponse = {
-                    access_token: credentials.socialToken,
-                    user: {
-                        id: 0,
-                        email: credentials.email,
-                        name: credentials.email.split('@')[0],
-                        role: 'customer',
-                        isActive: true,
-                    }
-                };
-                
-                // Store token and user data
-                localStorage.setItem(TOKEN_KEY, data.access_token);
-                localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-                setUser(data.user);
-                router.push('/dashboard');
-                return;
+                throw new Error(
+                    'Social sign-in is not available yet. Please sign in with your email and password.',
+                );
             }
 
             const response = await fetch(apiUrl('auth/login'), {

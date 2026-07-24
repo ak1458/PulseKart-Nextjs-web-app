@@ -84,7 +84,10 @@ function CheckoutPageContent() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [showRxModal, setShowRxModal] = useState(false);
     const [offerCode, setOfferCode] = useState('');
-    const [isOfferApplied, setIsOfferApplied] = useState(false);
+    // The code that was actually applied, captured at apply time. Storing a
+    // boolean meant editing the input afterwards kept the discount alive while
+    // the code it came from no longer existed.
+    const [appliedCode, setAppliedCode] = useState<string | null>(null);
     const [showOfferInput, setShowOfferInput] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -143,15 +146,26 @@ function CheckoutPageContent() {
         return paymentMethod === 'COD' ? SHIPPING_CONFIG.COD_FEE_INR : 0;
     }, [paymentMethod]);
 
+    const isOfferApplied = appliedCode !== null;
+
     const discount = useMemo(() => {
-        if (isOfferApplied) {
-            return Math.round(safeCartTotal * (SHIPPING_CONFIG.COUPON_DISCOUNT_PERCENT / 100));
+        if (appliedCode) {
+            // Use the coupon's own terms. This previously applied a flat
+            // COUPON_DISCOUNT_PERCENT to every code, so NEW15 - defined as 15%
+            // in VALID_COUPONS - silently gave the customer 10%.
+            const coupon = VALID_COUPONS[appliedCode];
+            if (coupon) {
+                const raw = coupon.type === 'fixed'
+                    ? coupon.discount
+                    : safeCartTotal * (coupon.discount / 100);
+                return Math.min(Math.round(raw), safeCartTotal);
+            }
         }
         if (paymentMethod === 'UPI') {
             return Math.round(safeCartTotal * (SHIPPING_CONFIG.UPI_DISCOUNT_PERCENT / 100));
         }
         return 0;
-    }, [safeCartTotal, isOfferApplied, paymentMethod]);
+    }, [safeCartTotal, appliedCode, paymentMethod]);
 
     const finalTotal = useMemo(() => {
         return Math.max(0, safeCartTotal + deliveryFee + codFee - discount);
@@ -196,7 +210,7 @@ function CheckoutPageContent() {
         setCodModalDismissed(true);
     };
 
-    const handlePayment = (bypassRx = false) => {
+    const handlePayment = () => {
         setError(null);
 
         if (step === 1) {
@@ -204,7 +218,11 @@ function CheckoutPageContent() {
             return;
         }
 
-        if (requiresPrescription && !isRxUploaded && !bypassRx) {
+        // Re-derived from state rather than accepting a `bypassRx` argument
+        // from the caller. The Rx modal's confirm button passed `true`, so the
+        // gate's outcome depended on the call site being trustworthy - a
+        // disabled attribute on a button is a UI hint, not an enforcement point.
+        if (requiresPrescription && !isRxUploaded) {
             setShowRxModal(true);
             return;
         }
@@ -536,13 +554,23 @@ function CheckoutPageContent() {
                                                     type="text"
                                                     placeholder="Enter code"
                                                     value={offerCode}
-                                                    onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
+                                                    onChange={(e) => {
+                                                        setOfferCode(e.target.value.toUpperCase());
+                                                        // Editing the code retracts the applied discount
+                                                        // until Apply is pressed again.
+                                                        setAppliedCode(null);
+                                                    }}
                                                     className="flex-1 bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent uppercase"
                                                 />
                                                 <button
                                                     onClick={() => {
-                                                        // Validate promo code using VALID_COUPONS constant
-                                                        setIsOfferApplied(offerCode in VALID_COUPONS);
+                                                        // Object.hasOwn, not `in`: `in` walks the prototype
+                                                        // chain, so "toString" and "constructor" were both
+                                                        // accepted as valid coupon codes.
+                                                        const code = offerCode.trim();
+                                                        setAppliedCode(
+                                                            Object.hasOwn(VALID_COUPONS, code) ? code : null,
+                                                        );
                                                     }}
                                                     className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors"
                                                 >
@@ -856,7 +884,7 @@ function CheckoutPageContent() {
 
                             <div className="space-y-3">
                                 <button
-                                    onClick={() => { setShowRxModal(false); handlePayment(true); }}
+                                    onClick={() => { setShowRxModal(false); handlePayment(); }}
                                     disabled={!isRxUploaded || isUploading}
                                     className={`w-full py-3 font-bold rounded-xl transition-colors ${isRxUploaded ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                                 >

@@ -5,6 +5,35 @@ import { ProductsService } from './products.service';
 import { Product } from './entities/product.entity';
 import { Batch } from './entities/batch.entity';
 
+/**
+ * Build a chainable SelectQueryBuilder stub.
+ *
+ * The previous tests hand-rolled a fresh object literal per case, listing only
+ * the chain methods that implementation happened to call at the time. When the
+ * service later added `.leftJoin()`, `.select()` and `.groupBy()`, every one of
+ * those literals started throwing "is not a function" - five tests were failing
+ * on main. Declaring the whole chain in one place keeps the stub honest.
+ *
+ * @param terminals Resolved values for the methods that end a chain, e.g.
+ *                  `{ getRawMany: [...] }` or `{ getRawOne: undefined }`.
+ */
+function createMockQueryBuilder(terminals: Record<string, unknown>) {
+    const chainMethods = [
+        'select', 'addSelect', 'leftJoin', 'leftJoinAndSelect', 'innerJoin',
+        'where', 'andWhere', 'orWhere', 'groupBy', 'addGroupBy',
+        'orderBy', 'addOrderBy', 'take', 'skip', 'limit', 'offset',
+    ];
+
+    const qb: Record<string, jest.Mock> = {};
+    for (const method of chainMethods) {
+        qb[method] = jest.fn().mockReturnThis();
+    }
+    for (const [method, value] of Object.entries(terminals)) {
+        qb[method] = jest.fn().mockResolvedValue(value);
+    }
+    return qb;
+}
+
 describe('ProductsService', () => {
     let service: ProductsService;
 
@@ -145,122 +174,80 @@ describe('ProductsService', () => {
     });
 
     describe('findAll', () => {
-        it('should return products with calculated stock', async () => {
-            const mockEntities = [
-                { id: 1, sku: 'P1', title: 'Product 1' },
-                { id: 2, sku: 'P2', title: 'Product 2' },
-            ];
-
-            const mockRaw = [
-                { p_id: '1', stock: '50' }, // Note: raw values are strings
-                { p_id: '2', stock: '30' },
-            ];
-
-            const mockQueryBuilder = {
-                addSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                orderBy: jest.fn().mockReturnThis(),
-                take: jest.fn().mockReturnThis(),
-                skip: jest.fn().mockReturnThis(),
-                getRawAndEntities: jest.fn().mockResolvedValue({
-                    entities: mockEntities,
-                    raw: mockRaw,
+        it('should map raw rows and coerce stock to a number', async () => {
+            // Postgres returns SUM() and every selected column as a string.
+            mockProductRepository.createQueryBuilder.mockReturnValue(
+                createMockQueryBuilder({
+                    getRawMany: [
+                        { p_id: 1, p_sku: 'P1', p_title: 'Product 1', stock: '50' },
+                        { p_id: 2, p_sku: 'P2', p_title: 'Product 2', stock: '30' },
+                    ],
                 }),
-            };
-
-            mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+            );
 
             const result = await service.findAll(50, 0);
 
             expect(result).toHaveLength(2);
-            expect(result[0]).toEqual({ ...mockEntities[0], stock: 50 });
-            expect(result[1]).toEqual({ ...mockEntities[1], stock: 30 });
+            expect(result[0]).toMatchObject({ id: 1, sku: 'P1', title: 'Product 1', stock: 50 });
+            expect(result[1]).toMatchObject({ id: 2, sku: 'P2', title: 'Product 2', stock: 30 });
         });
 
-        it('should handle type mismatch between p_id (string) and entity.id (number)', async () => {
-            const mockEntities = [{ id: 123, sku: 'P123', title: 'Product 123' }];
-            const mockRaw = [{ p_id: '123', stock: '45' }]; // p_id is string from raw query
-
-            const mockQueryBuilder = {
-                addSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                orderBy: jest.fn().mockReturnThis(),
-                take: jest.fn().mockReturnThis(),
-                skip: jest.fn().mockReturnThis(),
-                getRawAndEntities: jest.fn().mockResolvedValue({
-                    entities: mockEntities,
-                    raw: mockRaw,
+        it('should default stock to 0 when a product has no batches', async () => {
+            // COALESCE yields '0', and a product with no batch rows can also
+            // come back with stock null depending on the join.
+            mockProductRepository.createQueryBuilder.mockReturnValue(
+                createMockQueryBuilder({
+                    getRawMany: [
+                        { p_id: 1, p_sku: 'P1', p_title: 'No Batch', stock: null },
+                    ],
                 }),
-            };
-
-            mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
-
-            const result = await service.findAll(10, 0);
-
-            // Stock should be correctly matched despite string/number type difference
-            expect(result[0].stock).toBe(45);
-        });
-
-        it('should default stock to 0 when no batch matches', async () => {
-            const mockEntities = [{ id: 1, sku: 'P1', title: 'No Batch Product' }];
-            const mockRaw = [{ p_id: '999', stock: '100' }]; // Different ID
-
-            const mockQueryBuilder = {
-                addSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                orderBy: jest.fn().mockReturnThis(),
-                take: jest.fn().mockReturnThis(),
-                skip: jest.fn().mockReturnThis(),
-                getRawAndEntities: jest.fn().mockResolvedValue({
-                    entities: mockEntities,
-                    raw: mockRaw,
-                }),
-            };
-
-            mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+            );
 
             const result = await service.findAll(10, 0);
 
             expect(result[0].stock).toBe(0);
         });
+
+        it('should return an empty array when no products match', async () => {
+            mockProductRepository.createQueryBuilder.mockReturnValue(
+                createMockQueryBuilder({ getRawMany: [] }),
+            );
+
+            await expect(service.findAll(10, 0)).resolves.toEqual([]);
+        });
     });
 
     describe('findOne', () => {
-        it('should return product with stock by id', async () => {
-            const mockEntity = { id: 1, sku: 'P1', title: 'Single Product' };
-            const mockRaw = { p_id: '1', stock: '75' };
-
-            const mockQueryBuilder = {
-                addSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                getRawAndEntities: jest.fn().mockResolvedValue({
-                    entities: [mockEntity],
-                    raw: [mockRaw],
+        it('should return the product with stock by id', async () => {
+            mockProductRepository.createQueryBuilder.mockReturnValue(
+                createMockQueryBuilder({
+                    getRawOne: {
+                        p_id: 1,
+                        p_sku: 'P1',
+                        p_title: 'Single Product',
+                        p_prescription_required: true,
+                        stock: '75',
+                    },
                 }),
-            };
-
-            mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+            );
 
             const result = await service.findOne(1);
 
-            expect(result).toEqual({ ...mockEntity, stock: 75 });
+            expect(result).toMatchObject({
+                id: 1,
+                sku: 'P1',
+                title: 'Single Product',
+                prescription_required: true,
+                stock: 75,
+            });
         });
 
         it('should return null when product not found', async () => {
-            const mockQueryBuilder = {
-                addSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                getRawAndEntities: jest.fn().mockResolvedValue({
-                    entities: [],
-                    raw: [],
-                }),
-            };
+            mockProductRepository.createQueryBuilder.mockReturnValue(
+                createMockQueryBuilder({ getRawOne: undefined }),
+            );
 
-            mockProductRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
-
-            const result = await service.findOne(999);
-
-            expect(result).toBeNull();
+            await expect(service.findOne(999)).resolves.toBeNull();
         });
     });
 });

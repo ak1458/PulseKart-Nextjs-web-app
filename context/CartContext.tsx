@@ -24,6 +24,7 @@ export interface ProductInput {
     category?: string;
     mrp?: number;
     images?: string[];
+    requiresPrescription?: boolean;
 }
 
 interface CartContextType {
@@ -135,6 +136,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     qty: 1,
                     category: product.category,
                     mrp: product.mrp,
+                    // Carried through so checkout can enforce the prescription
+                    // gate. Omitting it meant CartItem.requiresPrescription was
+                    // never once set, so checkout's
+                    // `cart.some(i => i.requiresPrescription === true)` was
+                    // unconditionally false and the Rx check never ran.
+                    requiresPrescription: product.requiresPrescription === true,
                 }];
             });
             setIsCartOpen(true);

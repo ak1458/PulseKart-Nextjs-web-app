@@ -11,6 +11,42 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
 
+/**
+ * Columns that may be used to sort order listings.
+ *
+ * TypeORM interpolates orderBy() straight into the generated SQL - it is not a
+ * bound parameter - so this value can never come directly from a query string.
+ */
+const SORTABLE_COLUMNS = new Set([
+    'createdAt',
+    'updatedAt',
+    'totalAmount',
+    'status',
+    'paymentStatus',
+    'itemsCount',
+]);
+
+const DEFAULT_SORT_COLUMN = 'createdAt';
+const MAX_PAGE_SIZE = 100;
+
+/**
+ * Round to 2 decimal places to match the `decimal(10,2)` money columns.
+ *
+ * Without this, binary floating point leaks into totals: 19.99 * 3 is
+ * 59.970000000000006, which Postgres then rounds on write, so the persisted
+ * total no longer equals the sum of the persisted line items.
+ *
+ * Accepts strings because node-postgres returns `decimal` columns as strings to
+ * avoid precision loss - entities declare these fields as `number`, but an
+ * order loaded from the database actually carries `"5.00"`. Adding a number to
+ * that string would concatenate and then coerce to NaN.
+ */
+function round2(value: number | string | null | undefined): number {
+    const n = typeof value === 'number' ? value : Number(value ?? 0);
+    if (!Number.isFinite(n)) return 0;
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 @Injectable()
 export class OrdersService {
     constructor(
@@ -24,15 +60,50 @@ export class OrdersService {
     async create(createOrderDto: CreateOrderDto): Promise<Order> {
         const { items, ...orderData } = createOrderDto;
 
+        if (!items || items.length === 0) {
+            throw new BadRequestException('An order must contain at least one item');
+        }
+
         // Use transaction to ensure atomicity
         return this.dataSource.transaction(async (manager) => {
-            // Calculate items count
-            const itemsCount = items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+            // Every money field below is derived server-side. The request may
+            // carry totalAmount/subtotalAmount, but those are treated as
+            // untrusted: previously they were spread straight onto the entity,
+            // so the caller decided what the order was worth.
+            //
+            // NOTE: item unit prices are still taken from the request. That is
+            // acceptable only while this endpoint is admin-only (manual order
+            // entry may reference off-catalogue items). Before exposing order
+            // creation to customers, unit price MUST be resolved from the
+            // products table by productId, or price tampering becomes trivial.
+            const itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const subtotalAmount = round2(
+                items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+            );
+
+            const taxAmount = round2(orderData.taxAmount ?? 0);
+            const shippingAmount = round2(orderData.shippingAmount ?? 0);
+            const discountAmount = round2(orderData.discountAmount ?? 0);
+
+            if (discountAmount > subtotalAmount + taxAmount + shippingAmount) {
+                throw new BadRequestException(
+                    'Discount cannot exceed the order value',
+                );
+            }
+
+            const totalAmount = round2(
+                subtotalAmount + taxAmount + shippingAmount - discountAmount,
+            );
 
             // Create order
             const order = manager.create(Order, {
                 ...orderData,
                 itemsCount,
+                subtotalAmount,
+                taxAmount,
+                shippingAmount,
+                discountAmount,
+                totalAmount,
                 status: orderData.status || OrderStatus.CREATED,
                 paymentStatus: orderData.paymentStatus || PaymentStatus.PENDING,
             });
@@ -45,7 +116,7 @@ export class OrdersService {
                     manager.create(OrderItem, {
                         ...item,
                         orderId: savedOrder.id,
-                        totalPrice: item.price * item.quantity,
+                        totalPrice: round2(item.price * item.quantity),
                     }),
                 );
                 await manager.save(orderItems);
@@ -95,14 +166,23 @@ export class OrdersService {
             );
         }
 
-        // Sorting
-        const sortBy = filters?.sortBy || 'createdAt';
-        const sortOrder = filters?.sortOrder || 'DESC';
+        // Sorting. Both operands are validated against fixed sets rather than
+        // interpolated, because orderBy() is not parameterised.
+        const requestedSort = filters?.sortBy ?? DEFAULT_SORT_COLUMN;
+        const sortBy = SORTABLE_COLUMNS.has(requestedSort)
+            ? requestedSort
+            : DEFAULT_SORT_COLUMN;
+        const sortOrder = filters?.sortOrder === 'ASC' ? 'ASC' : 'DESC';
         queryBuilder.orderBy(`order.${sortBy}`, sortOrder);
 
-        // Pagination
-        const page = parseInt(filters?.page || '1', 10);
-        const limit = parseInt(filters?.limit || '50', 10);
+        // Pagination. Guard against NaN, zero, negatives and unbounded pages -
+        // `parseInt('abc')` is NaN, and `skip(NaN)` throws at the driver.
+        const parsedPage = parseInt(filters?.page ?? '1', 10);
+        const parsedLimit = parseInt(filters?.limit ?? '50', 10);
+        const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+        const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+            ? Math.min(parsedLimit, MAX_PAGE_SIZE)
+            : 50;
         queryBuilder.skip((page - 1) * limit).take(limit);
 
         return queryBuilder.getMany();
@@ -139,9 +219,19 @@ export class OrdersService {
             // Update order fields
             Object.assign(order, orderData);
 
-            // Update items count if items provided
+            // Recalculate money fields when the line items change, so the
+            // stored totals cannot drift away from the items they describe.
             if (items) {
                 order.itemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+                order.subtotalAmount = round2(
+                    items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+                );
+                order.totalAmount = round2(
+                    order.subtotalAmount +
+                    round2(order.taxAmount ?? 0) +
+                    round2(order.shippingAmount ?? 0) -
+                    round2(order.discountAmount ?? 0),
+                );
 
                 // Remove existing items and create new ones
                 await manager.delete(OrderItem, { orderId: id });
@@ -150,7 +240,7 @@ export class OrdersService {
                     manager.create(OrderItem, {
                         ...item,
                         orderId: id,
-                        totalPrice: item.price * item.quantity,
+                        totalPrice: round2(item.price * item.quantity),
                     }),
                 );
                 await manager.save(orderItems);

@@ -8,6 +8,7 @@ import { useCart } from '@/context/CartContext';
 import { motion } from 'framer-motion';
 import { getProductImage } from '@/lib/images';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { safeNumber, isPrescriptionProduct } from '@/lib/utils';
 
 // Product type definition
 export interface Product {
@@ -31,16 +32,6 @@ export interface Product {
 interface ProductCardProps {
     product: Product;
 }
-
-// Safe number formatter
-const safeNumber = (value: unknown, defaultValue = 0): number => {
-    if (typeof value === 'number') return isNaN(value) ? defaultValue : value;
-    if (typeof value === 'string') {
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? defaultValue : parsed;
-    }
-    return defaultValue;
-};
 
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
@@ -70,6 +61,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 image: image,
                 category: product.category,
                 mrp: originalPrice,
+                requiresPrescription: isPrescriptionProduct(product),
             });
         } finally {
             // Reset after animation

@@ -24,6 +24,7 @@ import ProductCard from '@/components/ui/ProductCard';
 import UploadModal from '@/components/ui/UploadModal';
 import { useCart } from '@/context/CartContext';
 import { getProductImage } from '@/lib/images';
+import { isPrescriptionProduct } from '@/lib/utils';
 
 // --- Product Data (populated from backend) ---
 const FEATURED_PRODUCTS: any[] = [];
@@ -150,7 +151,7 @@ export default function Home() {
                   <div className="relative h-44">
                     <img src={getProductImage(product.image)} alt={product.name} className="w-full h-full object-cover" />
                     <button
-                      onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, image: product.image, category: product.category })}
+                      onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, image: product.image, category: product.category, requiresPrescription: isPrescriptionProduct(product) })}
                       className="absolute bottom-3 right-3 px-4 py-2 bg-teal-500 text-white text-xs font-bold rounded-full shadow-[0_10px_20px_rgba(20,184,166,0.4)]"
                     >
                       + Add
