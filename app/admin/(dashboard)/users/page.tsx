@@ -17,6 +17,7 @@ import {
 } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiUrl } from '@/lib/api';
+import { getAuthHeaders } from '@/context/AuthContext';
 import { getAvatarImage } from '@/lib/images';
 
 interface Staff {
@@ -34,6 +35,7 @@ interface Staff {
 export default function StaffPage() {
     const [staff, setStaff] = useState<Staff[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -47,60 +49,32 @@ export default function StaffPage() {
         avatar: ''
     });
 
-    const getMockStaff = (): Staff[] => [];
-
-    const loadCachedStaff = () => {
-        try {
-            const cached = localStorage.getItem('admin_staff');
-            if (!cached) return null;
-            const parsed = JSON.parse(cached);
-            return Array.isArray(parsed) ? parsed : null;
-        } catch (error) {
-            console.warn('Failed to parse cached staff', error);
-            localStorage.removeItem('admin_staff');
-            return null;
-        }
-    };
-
-    const cacheStaff = (list: Staff[]) => {
-        try {
-            localStorage.setItem('admin_staff', JSON.stringify(list));
-        } catch (error) {
-            console.warn('Failed to cache staff', error);
-        }
-    };
 
     useEffect(() => {
-        loadStaff();
+        void fetchStaff();
     }, []);
 
-    const loadStaff = async () => {
-        const saved = localStorage.getItem('admin_staff');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setStaff(Array.isArray(parsed) ? parsed : []);
-                setLoading(false);
-                return;
-            } catch (error) {
-                console.warn('Failed to parse cached staff', error);
-                localStorage.removeItem('admin_staff');
-                fetchStaff();
-            }
-        } else {
-            fetchStaff();
-        }
-    };
-
+    /**
+     * Load staff from the API.
+     *
+     * Three things were wrong here. It requested `employees`, which no
+     * controller serves - the endpoint is `v1/users`. It sent no Authorization
+     * header, so that route's AdminGuard would have rejected it regardless. And
+     * it cached the result in localStorage and preferred the cache on every
+     * subsequent load, so once anything was stored the page never contacted the
+     * server again and a failure was indistinguishable from an empty team.
+     */
     const fetchStaff = async () => {
+        setLoading(true);
+        setLoadError(null);
         try {
-            const res = await fetch(apiUrl('employees'));
-            if (res.status === 404) {
-                setStaff([]);
-                return;
-            }
+            const res = await fetch(apiUrl('users'), { headers: getAuthHeaders() });
             if (!res.ok) {
-                throw new Error(`Failed to load staff (${res.status})`);
+                throw new Error(
+                    res.status === 401 || res.status === 403
+                        ? 'You do not have permission to view staff.'
+                        : `Failed to load staff (${res.status})`,
+                );
             }
             const data = await res.json();
             const list = Array.isArray(data)
@@ -110,22 +84,25 @@ export default function StaffPage() {
                     : [];
             // Map backend data to frontend interface if needed
             // Assuming backend returns matching fields or we map them here
-            const mapped = list.map((emp: any) => ({
-                id: emp.id,
-                name: emp.name,
-                role: emp.role,
-                email: emp.email,
-                phone: emp.phone,
-                status: emp.status,
-                department: emp.department,
-                joinDate: emp.created_at,
-                avatar: getAvatarImage(emp.avatar)
+            // The User entity has no department or phone. Rather than invent
+            // them, they render as em dashes and `status` is derived from
+            // isActive, which does exist.
+            const mapped: Staff[] = list.map((user: Record<string, unknown>) => ({
+                id: String(user.id),
+                name: String(user.name ?? ''),
+                role: String(user.role ?? 'customer'),
+                email: String(user.email ?? ''),
+                phone: typeof user.phone === 'string' ? user.phone : '',
+                status: user.isActive === false ? 'Inactive' : 'Active',
+                department: '',
+                joinDate: typeof user.createdAt === 'string' ? user.createdAt : '',
+                avatar: getAvatarImage(''),
             }));
 
             setStaff(mapped);
-            cacheStaff(mapped);
         } catch (error) {
             console.error('Failed to fetch staff', error);
+            setLoadError(error instanceof Error ? error.message : 'Could not load staff.');
             setStaff([]);
         } finally {
             setLoading(false);
@@ -247,6 +224,18 @@ export default function StaffPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {loading ? (
                     <p className="text-center col-span-3 py-8 text-gray-400">Loading staff...</p>
+                ) : loadError ? (
+                    // Distinguished from "no staff": the two used to look identical,
+                    // so a failed request read as an empty team.
+                    <div className="col-span-3 rounded-xl border border-red-500/40 bg-red-500/10 py-8 text-center">
+                        <p className="font-bold text-red-300">{loadError}</p>
+                        <button
+                            onClick={() => void fetchStaff()}
+                            className="mt-3 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5"
+                        >
+                            Try again
+                        </button>
+                    </div>
                 ) : filteredStaff.length === 0 ? (
                     <p className="text-center col-span-3 py-8 text-gray-400">No employees found.</p>
                 ) : (

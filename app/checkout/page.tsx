@@ -29,37 +29,46 @@ import {
     isSignedIn,
     type OrderQuote,
 } from '@/lib/checkout-api';
+import { fetchAddresses, createAddress, type Address } from '@/lib/addresses-api';
 
-interface Address {
-    id: number;
-    type: string;
+// Address shape comes from lib/addresses-api so checkout and the dashboard
+// agree on one definition. Addresses used to live only in this component's
+// state and vanished on refresh.
+
+type PaymentMethod = 'UPI' | 'CARD' | 'COD';
+
+/** The inline "add an address" form, before it is mapped onto an Address. */
+interface AddressFormValues {
     name: string;
     phone: string;
     address: string;
     city: string;
     pincode: string;
-    isDefault: boolean;
+    type: string;
 }
 
-type PaymentMethod = 'UPI' | 'CARD' | 'COD';
-
-// Address Form Validation
-const validateAddress = (address: Omit<Address, 'id' | 'isDefault'>): string[] => {
+/**
+ * Validate the inline address form.
+ *
+ * Mirrors backend/src/addresses/dto/address.dto.ts, including the leading
+ * 6-9 rule for Indian mobile numbers that the previous `^\d{10}$` missed.
+ */
+const validateAddress = (address: AddressFormValues): string[] => {
     const errors: string[] = [];
 
-    if (!address.name || address.name.length < 2) {
+    if (!address.name || address.name.trim().length < 2) {
         errors.push('Name must be at least 2 characters');
     }
 
-    if (!address.phone || !/^\d{10}$/.test(address.phone.replace(/\D/g, ''))) {
-        errors.push('Phone must be 10 digits');
+    if (!address.phone || !/^[6-9]\d{9}$/.test(address.phone.replace(/\D/g, ''))) {
+        errors.push('Enter a valid 10-digit mobile number');
     }
 
-    if (!address.address || address.address.length < 10) {
+    if (!address.address || address.address.trim().length < 10) {
         errors.push('Address must be at least 10 characters');
     }
 
-    if (!address.city || address.city.length < 2) {
+    if (!address.city || address.city.trim().length < 2) {
         errors.push('City is required');
     }
 
@@ -86,7 +95,7 @@ function CheckoutPageContent() {
 
     // State
     const [step, setStep] = useState(1);
-    const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
+    const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI');
     const [isProcessing, setIsProcessing] = useState(false);
     const [showRxModal, setShowRxModal] = useState(false);
@@ -98,7 +107,7 @@ function CheckoutPageContent() {
     const [showOfferInput, setShowOfferInput] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Address State
+    // Address State - loaded from the customer's saved address book.
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [newAddress, setNewAddress] = useState({
@@ -124,6 +133,24 @@ function CheckoutPageContent() {
     // COD Modal State
     const [showCODModal, setShowCODModal] = useState(false);
     const [codModalDismissed, setCodModalDismissed] = useState(false);
+
+    // Load the saved address book and preselect the default, so a returning
+    // customer does not retype an address they have already given us.
+    useEffect(() => {
+        if (!isSignedIn()) return;
+
+        let cancelled = false;
+        fetchAddresses()
+            .then(result => {
+                if (cancelled) return;
+                setSavedAddresses(result);
+                const preferred = result.find(a => a.isDefault) ?? result[0];
+                if (preferred) setSelectedAddress(preferred.id);
+            })
+            .catch(() => { /* the empty state and the add form still work */ });
+
+        return () => { cancelled = true; };
+    }, []);
 
     // Sync payment method with URL
     useEffect(() => {
@@ -202,7 +229,7 @@ function CheckoutPageContent() {
     const requiresPrescription = quote?.requiresPrescription
         ?? cart.some(item => item.requiresPrescription === true);
 
-    const handleAddAddress = (e: React.FormEvent) => {
+    const handleAddAddress = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setAddressErrors([]);
@@ -213,15 +240,25 @@ function CheckoutPageContent() {
             return;
         }
 
-        const address: Address = {
-            id: savedAddresses.length + 1,
-            ...newAddress,
-            isDefault: false
-        };
-        setSavedAddresses([...savedAddresses, address]);
-        setSelectedAddress(address.id);
-        setShowAddressModal(false);
-        setNewAddress({ name: '', phone: '', address: '', city: '', pincode: '', type: 'Home' });
+        try {
+            // Persisted rather than pushed into local state with
+            // `id: savedAddresses.length + 1`, which collided after a delete
+            // and was lost on refresh.
+            const saved = await createAddress({
+                label: newAddress.type.toLowerCase() as 'home' | 'work' | 'other',
+                recipientName: newAddress.name,
+                phone: newAddress.phone.replace(/\D/g, ''),
+                line1: newAddress.address,
+                city: newAddress.city,
+                pincode: newAddress.pincode,
+            });
+            setSavedAddresses(prev => [...prev, saved]);
+            setSelectedAddress(saved.id);
+            setShowAddressModal(false);
+            setNewAddress({ name: '', phone: '', address: '', city: '', pincode: '', type: 'Home' });
+        } catch (err) {
+            setAddressErrors([err instanceof Error ? err.message : 'Could not save this address.']);
+        }
     };
 
     const switchToUPI = () => {
@@ -431,11 +468,11 @@ function CheckoutPageContent() {
                                                     </div>
                                                 )}
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    {addr.type === 'Home' ? <Home className="w-4 h-4 text-teal-300" /> : <Briefcase className="w-4 h-4 text-teal-300" />}
-                                                    <span className="font-bold text-white">{addr.type}</span>
+                                                    {addr.label === 'work' ? <Briefcase className="w-4 h-4 text-teal-300" /> : <Home className="w-4 h-4 text-teal-300" />}
+                                                    <span className="font-bold text-white capitalize">{addr.label}</span>
                                                 </div>
-                                                <p className="text-sm font-bold text-white">{addr.name}</p>
-                                                <p className="text-sm text-gray-400 line-clamp-2">{addr.address}, {addr.city} - {addr.pincode}</p>
+                                                <p className="text-sm font-bold text-white">{addr.recipientName}</p>
+                                                <p className="text-sm text-gray-400 line-clamp-2">{addr.line1}, {addr.city} - {addr.pincode}</p>
                                                 <p className="text-sm text-gray-500 mt-1">Phone: {addr.phone}</p>
                                             </div>
                                         ))}
@@ -466,12 +503,18 @@ function CheckoutPageContent() {
                                 </div>
                             )}
 
-                            {step === 2 && selectedAddress && (
-                                <div className="text-sm text-gray-300">
-                                    <p className="font-bold text-white">{savedAddresses.find(a => a.id === selectedAddress)?.name}</p>
-                                    <p className="text-gray-400">{savedAddresses.find(a => a.id === selectedAddress)?.address}</p>
-                                </div>
-                            )}
+                            {step === 2 && selectedAddress && (() => {
+                                const chosen = savedAddresses.find(a => a.id === selectedAddress);
+                                if (!chosen) return null;
+                                return (
+                                    <div className="text-sm text-gray-300">
+                                        <p className="font-bold text-white">{chosen.recipientName}</p>
+                                        <p className="text-gray-400">
+                                            {chosen.line1}, {chosen.city} - {chosen.pincode}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Payment Section */}

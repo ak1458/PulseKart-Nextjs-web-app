@@ -36,6 +36,10 @@ import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { SavedItemsModule } from './saved-items/saved-items.module';
+import { SavedItem } from './saved-items/entities/saved-item.entity';
+import { Address } from './addresses/entities/address.entity';
 import { Prescription } from './prescriptions/entities/prescription.entity';
 
 @Module({
@@ -91,6 +95,10 @@ import { Prescription } from './prescriptions/entities/prescription.entity';
                 OrderItem,
                 // Prescription entities
                 Prescription,
+                // Address entities
+                Address,
+                // Saved item entities
+                SavedItem,
             ],
             synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
             // Connection pooling
@@ -110,6 +118,8 @@ import { Prescription } from './prescriptions/entities/prescription.entity';
         PaymentsModule,
         OrdersModule,
         PrescriptionsModule,
+        AddressesModule,
+        SavedItemsModule,
         DatabaseModule, // Seeds admin user on startup
     ],
     controllers: [AppController],

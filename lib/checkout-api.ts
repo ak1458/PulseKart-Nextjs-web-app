@@ -198,6 +198,21 @@ export async function fetchMyOrders(): Promise<CustomerOrder[]> {
     return orders.map(normalizeOrder);
 }
 
+/** Prescriptions belonging to the signed-in customer, newest first. */
+export async function fetchPrescriptions(): Promise<PrescriptionSummary[]> {
+    if (!isSignedIn()) return [];
+
+    const response = await fetch(apiUrl('prescriptions'), {
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        throw await toError(response, 'Could not load your prescriptions.');
+    }
+
+    return response.json();
+}
+
 /**
  * Upload a prescription and return its stored record.
  *
