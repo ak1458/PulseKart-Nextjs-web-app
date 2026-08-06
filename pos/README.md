@@ -4,9 +4,11 @@ Offline-first point of sale for Indian retail pharmacies. FEFO batch dispensing,
 Schedule H1 register, GST invoicing, and a setup wizard aimed at someone who runs
 a chemist shop rather than a server.
 
-> **Status: foundation, not yet a shippable product.** The domain layer, database
-> schema and installer are built and tested. The selling UI is not. See
-> [What is and isn't built](#what-is-and-isnt-built) before planning around it.
+> **Status: a sale works end to end; not yet a shippable product.** You can
+> install it, sign in, open a shift, bill an item against FEFO-allocated stock
+> with GST computed and an H1 register entry written, and close the drawer
+> against a counted total. Offline mode, purchases and printing are not built.
+> See [What is and isn't built](#what-is-and-isnt-built).
 
 ## Setup
 
@@ -37,6 +39,23 @@ The wizard asks for:
 
 It refuses to run twice — the guard is a row lock inside the same transaction that
 creates the owner, so two people submitting the form at once cannot both succeed.
+
+## Using it
+
+After setup, sign in at `/login` with the owner account you created.
+
+1. **`/pos`** — open a shift with the cash already in the drawer. Nothing can be
+   sold until one is open, because a sale with no shift cannot be reconciled.
+2. Search stock by name or salt. Each result shows what will be dispensed: units
+   on hand, the earliest expiry, and a schedule badge (`Rx`, `H1`).
+3. Add items and bill. Restricted items require confirming a prescription was
+   seen; Schedule H1 additionally collects the register details, and the sale is
+   refused if the signed-in user has no pharmacist registration number.
+4. **`/shift`** — count the drawer denomination by denomination and close.
+
+The expected cash total stays hidden behind a button until the count is entered.
+Showing it first invites the counter to type the expected number rather than
+count, which is the one thing the count exists to prevent.
 
 ## Why these decisions
 
@@ -90,25 +109,30 @@ Verify current thresholds before going live; they move.
 
 ## What is and isn't built
 
-Built and tested (60 tests, `npm test`):
+Built (60 domain tests, `npm test`):
 
 - Full schema with tenant isolation, FEFO index, audit trail
 - GST: inclusive-tax split, CGST/SGST vs IGST, round-off, financial year
 - Dispensing: FEFO allocation, end-of-month expiry, expiry tiers, schedule rules
-- Shifts: takings by tender, expected cash, variance, denomination counting
+- Shifts: open/close, takings by tender, expected cash, variance, denominations
+- **Sale transaction**: stock allocation, invoice numbering, sale and lines,
+  stock ledger and H1 register, all in one transaction
+- Session auth with an httpOnly cookie, plus edge middleware on `/pos`, `/shift`
 - Setup wizard: pre-flight checks, migrations, first-run install
+- Selling screen and shift-close screen
 
 Not built:
 
-- **The selling screen.** The domain logic a sale needs exists and is tested; the
-  UI and the API route that ties them to the database do not.
-- **Offline queue and sync.** The schema is ready for it — `sales.client_uuid` is
-  unique per pharmacy so a sale replayed after a reconnect cannot insert twice —
-  but there is no service worker or local store yet.
-- Authentication beyond the owner account created at install.
+- **Offline queue and sync.** The schema is ready — `sales.client_uuid` is unique
+  per pharmacy, and the sale endpoint already returns the original sale instead
+  of inserting a second one when a client replays it — but there is no service
+  worker or local store, so the till still needs the network.
+- **Integration tests.** The domain layer is covered; the DB-bound code in
+  `src/lib/{sales,shifts}.ts` is not, because it needs a live Postgres.
 - Purchase/GRN entry, returns, credit notes, supplier management.
 - IRN generation, e-way bills, Tally export.
-- Barcode scanning and receipt printing.
+- Barcode scanning and receipt printing — a sale records, but nothing prints.
+- Staff management beyond the owner account created at install.
 
 ## Layout
 
@@ -118,7 +142,8 @@ src/domain/       pure business logic - no database, fully unit tested
   gst.ts          tax split, invoice totals, financial year
   dispensing.ts   FEFO, expiry, schedule H/H1/X rules
   shift.ts        takings, reconciliation, denomination counting
-src/lib/          database pool, installer
+src/lib/          database pool, installer, auth, shifts, sales
+src/middleware.ts edge guard on /pos and /shift
 tests/            vitest, mirrors src/domain
 ```
 
