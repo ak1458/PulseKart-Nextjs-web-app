@@ -19,18 +19,23 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { getProductImage } from '@/lib/images';
-import { SHIPPING_CONFIG, VALID_COUPONS } from '@/lib/constants';
+import { PRICING_COPY } from '@/lib/constants';
 import { safeNumber } from '@/lib/utils';
 
 export default function CartPage() {
     const { cart, updateQty, removeFromCart, cartTotal } = useCart();
     const [paymentMethod, setPaymentMethod] = useState<'PREPAID' | 'COD'>('PREPAID');
     const [showCODModal, setShowCODModal] = useState(false);
-    const [coupon, setCoupon] = useState('');
-    const [isCouponApplied, setIsCouponApplied] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Safe calculations using useMemo
+    // The cart is a preview. Fees, discounts and the payable total are computed
+    // by the server at checkout (POST /v1/orders/quote) and shown there.
+    //
+    // This block used to re-implement the pricing rules a third time - after
+    // lib/constants.ts and the checkout page - and disagreed with both: it
+    // stacked the prepaid and coupon discounts, where checkout applied only one.
+    // The drift was visible in this component's own markup, which announced
+    // "NEW15 applied (10% off)" two lines above advertising NEW15 as 15% off.
     const calculations = useMemo(() => {
         const subtotal = safeNumber(cartTotal);
         const mrpTotal = cart.reduce((acc, item) => {
@@ -39,41 +44,14 @@ export default function CartPage() {
             return acc + (mrp * qty);
         }, 0);
 
-        const shipping = subtotal >= SHIPPING_CONFIG.FREE_THRESHOLD_INR ? 0 : SHIPPING_CONFIG.BASE_DELIVERY_FEE_INR;
-        const codFee = paymentMethod === 'COD' ? SHIPPING_CONFIG.COD_FEE_INR : 0;
-        const prepaidDiscount = paymentMethod === 'PREPAID'
-            ? Math.round(subtotal * (SHIPPING_CONFIG.PREPAID_DISCOUNT_PERCENT / 100))
-            : 0;
-        const couponDiscount = isCouponApplied
-            ? Math.round(subtotal * (SHIPPING_CONFIG.COUPON_DISCOUNT_PERCENT / 100))
-            : 0;
-
-        const total = Math.max(0, subtotal + shipping + codFee - prepaidDiscount - couponDiscount);
-        const totalSavings = Math.max(0, (mrpTotal - subtotal) + prepaidDiscount + couponDiscount);
-
         return {
             subtotal,
             mrpTotal,
-            shipping,
-            codFee,
-            prepaidDiscount,
-            couponDiscount,
-            total,
-            totalSavings,
+            /** Savings against MRP only - a fact about the catalogue, not a quote. */
+            catalogueSavings: Math.max(0, mrpTotal - subtotal),
+            qualifiesForFreeDelivery: subtotal >= PRICING_COPY.FREE_DELIVERY_THRESHOLD_INR,
         };
-    }, [cart, cartTotal, paymentMethod, isCouponApplied]);
-
-    const handleApplyCoupon = () => {
-        setError(null);
-        const code = coupon.trim().toUpperCase();
-
-        if (code === 'NEW15') {
-            setIsCouponApplied(true);
-        } else {
-            setError('Invalid coupon code. Try NEW15 for 15% off');
-            setIsCouponApplied(false);
-        }
-    };
+    }, [cart, cartTotal]);
 
     const handlePaymentChange = (method: 'PREPAID' | 'COD') => {
         setError(null);
@@ -141,9 +119,9 @@ export default function CartPage() {
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">Paying Cash? That&apos;s sad!</h3>
                             <p className="text-gray-500 mb-6">
-                                COD orders incur a <span className="font-bold text-red-500">₹{SHIPPING_CONFIG.COD_FEE_INR} handling fee</span>.
+                                COD orders incur a <span className="font-bold text-red-500">₹{PRICING_COPY.COD_FEE_INR} handling fee</span>.
                                 <br />
-                                Switch to Prepaid to save ₹{SHIPPING_CONFIG.COD_FEE_INR} + get <span className="font-bold text-green-600">EXTRA {SHIPPING_CONFIG.PREPAID_DISCOUNT_PERCENT}% OFF!</span>
+                                Switch to Prepaid to save ₹{PRICING_COPY.COD_FEE_INR} + get <span className="font-bold text-green-600">EXTRA {PRICING_COPY.UPI_DISCOUNT_PERCENT}% OFF!</span>
                             </p>
                             <div className="space-y-3">
                                 <button
@@ -180,17 +158,17 @@ export default function CartPage() {
                 </div>
 
                 {/* Free Delivery Bar */}
-                {calculations.shipping > 0 && (
+                {!calculations.qualifiesForFreeDelivery && (
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-4">
                         <div className="flex-1">
                             <div className="flex justify-between text-xs font-bold mb-1.5">
-                                <span className="text-blue-400">Add items worth ₹{SHIPPING_CONFIG.FREE_THRESHOLD_INR - calculations.subtotal} more for FREE Delivery</span>
-                                <span className="text-blue-400">{Math.round((calculations.subtotal / SHIPPING_CONFIG.FREE_THRESHOLD_INR) * 100)}%</span>
+                                <span className="text-blue-400">Add items worth ₹{PRICING_COPY.FREE_DELIVERY_THRESHOLD_INR - calculations.subtotal} more for FREE Delivery</span>
+                                <span className="text-blue-400">{Math.round((calculations.subtotal / PRICING_COPY.FREE_DELIVERY_THRESHOLD_INR) * 100)}%</span>
                             </div>
                             <div className="w-full bg-blue-500/20 rounded-full h-2">
                                 <div
                                     className="bg-blue-500 h-2 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                                    style={{ width: `${Math.min(100, (calculations.subtotal / SHIPPING_CONFIG.FREE_THRESHOLD_INR) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (calculations.subtotal / PRICING_COPY.FREE_DELIVERY_THRESHOLD_INR) * 100)}%` }}
                                 ></div>
                             </div>
                         </div>
@@ -282,7 +260,7 @@ export default function CartPage() {
                                 onClick={() => handlePaymentChange('PREPAID')}
                                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${paymentMethod === 'PREPAID' ? 'bg-teal-500/20 text-teal-300 shadow-sm border border-teal-500/30' : 'text-gray-400 hover:text-gray-200'}`}
                             >
-                                Prepaid (Save {SHIPPING_CONFIG.PREPAID_DISCOUNT_PERCENT}%)
+                                Prepaid (Save {PRICING_COPY.UPI_DISCOUNT_PERCENT}%)
                             </button>
                             <button
                                 onClick={() => handlePaymentChange('COD')}
@@ -292,73 +270,32 @@ export default function CartPage() {
                             </button>
                         </div>
 
-                        {/* Coupon */}
-                        <div className="mb-6">
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Enter Coupon Code"
-                                    value={coupon}
-                                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 uppercase"
-                                />
-                                <button
-                                    onClick={handleApplyCoupon}
-                                    className="px-4 py-2 bg-white/10 text-white text-sm font-bold rounded-lg hover:bg-white/20 transition-colors border border-white/10"
-                                >
-                                    Apply
-                                </button>
-                            </div>
-                            {isCouponApplied && (
-                                <p className="text-xs text-emerald-400 font-bold mt-2 flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3" /> Coupon NEW15 applied! ({SHIPPING_CONFIG.COUPON_DISCOUNT_PERCENT}% off)
-                                </p>
-                            )}
-                            {!isCouponApplied && !coupon && (
-                                <p className="text-xs text-gray-500 mt-2">Try code <span className="font-bold text-gray-400">NEW15</span> for {VALID_COUPONS.NEW15.discount}% off</p>
-                            )}
-                        </div>
-
                         <div className="space-y-3 mb-6 pb-6 border-b border-white/10">
                             <div className="flex justify-between text-gray-400 text-sm">
                                 <span>Subtotal</span>
                                 <span>₹{calculations.subtotal.toFixed(2)}</span>
                             </div>
-                            {isCouponApplied && calculations.couponDiscount > 0 && (
-                                <div className="flex justify-between text-emerald-400 text-sm font-medium">
-                                    <span>Coupon Discount</span>
-                                    <span>-₹{calculations.couponDiscount.toFixed(2)}</span>
-                                </div>
-                            )}
-                            {paymentMethod === 'PREPAID' && calculations.prepaidDiscount > 0 && (
-                                <div className="flex justify-between text-emerald-400 text-sm font-medium">
-                                    <span>Prepaid Discount ({SHIPPING_CONFIG.PREPAID_DISCOUNT_PERCENT}%)</span>
-                                    <span>-₹{calculations.prepaidDiscount.toFixed(2)}</span>
-                                </div>
-                            )}
-                            {paymentMethod === 'COD' && (
-                                <div className="flex justify-between text-orange-400 text-sm font-medium">
-                                    <span>COD Handling Fee</span>
-                                    <span>+₹{calculations.codFee.toFixed(2)}</span>
-                                </div>
-                            )}
                             <div className="flex justify-between text-gray-400 text-sm">
                                 <span>Delivery Charges</span>
-                                <span className={calculations.shipping === 0 ? "text-emerald-400 font-bold" : ""}>
-                                    {calculations.shipping === 0 ? "FREE" : `₹${calculations.shipping.toFixed(2)}`}
+                                <span className={calculations.qualifiesForFreeDelivery ? "text-emerald-400 font-bold" : ""}>
+                                    {calculations.qualifiesForFreeDelivery ? "FREE" : 'Calculated at checkout'}
                                 </span>
                             </div>
                         </div>
 
                         <div className="flex justify-between items-end mb-2">
-                            <span className="font-bold text-white text-lg">Total Amount</span>
+                            <span className="font-bold text-white text-lg">Subtotal</span>
                             <div className="text-right">
-                                <span className="font-bold text-white text-2xl">₹{calculations.total.toFixed(2)}</span>
-                                {calculations.totalSavings > 0 && (
-                                    <p className="text-[10px] text-emerald-400 font-bold">You save ₹{calculations.totalSavings.toFixed(2)}!</p>
+                                <span className="font-bold text-white text-2xl">₹{calculations.subtotal.toFixed(2)}</span>
+                                {calculations.catalogueSavings > 0 && (
+                                    <p className="text-[10px] text-emerald-400 font-bold">You save ₹{calculations.catalogueSavings.toFixed(2)} vs MRP</p>
                                 )}
                             </div>
                         </div>
+
+                        <p className="text-xs text-gray-500 mb-4">
+                            Coupons, payment discounts and delivery charges are applied at checkout.
+                        </p>
 
                         <div className="bg-emerald-500/10 rounded-lg p-2 mb-6 text-center border border-emerald-500/20">
                             <p className="text-xs text-emerald-300 font-medium">

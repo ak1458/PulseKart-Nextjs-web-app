@@ -1,14 +1,113 @@
 'use client';
 
-import React, { useState } from 'react';
-import { MapPin, Plus, Trash2, Edit2, CheckCircle, Navigation, Home, Briefcase } from '@/lib/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapPin, Plus, Trash2, CheckCircle, Home, Briefcase, AlertCircle } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+    fetchAddresses,
+    createAddress,
+    deleteAddress,
+    setDefaultAddress,
+    type Address,
+    type AddressLabel,
+} from '@/lib/addresses-api';
 
-// Addresses are loaded from the backend. Keep empty for a clean client-ready view.
-const ADDRESSES: any[] = [];
+const EMPTY_FORM = {
+    label: 'home' as AddressLabel,
+    recipientName: '',
+    phone: '',
+    line1: '',
+    city: '',
+    pincode: '',
+};
+
+/**
+ * Validate before sending.
+ *
+ * These rules mirror the DTO in backend/src/addresses/dto/address.dto.ts. The
+ * server revalidates everything - this exists to put the error next to the
+ * field instead of after a round trip.
+ */
+function validate(form: typeof EMPTY_FORM): string[] {
+    const errors: string[] = [];
+    if (form.recipientName.trim().length < 2) errors.push('Enter the recipient’s name');
+    if (!/^[6-9]\d{9}$/.test(form.phone.replace(/\D/g, ''))) {
+        errors.push('Enter a valid 10-digit mobile number');
+    }
+    if (form.line1.trim().length < 10) errors.push('Address must be at least 10 characters');
+    if (form.city.trim().length < 2) errors.push('Enter a city');
+    if (!/^\d{6}$/.test(form.pincode)) errors.push('Pincode must be 6 digits');
+    return errors;
+}
+
+const LABEL_ICON: Record<AddressLabel, typeof Home> = {
+    home: Home,
+    work: Briefcase,
+    other: MapPin,
+};
 
 export default function AddressesPage() {
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [isAdding, setIsAdding] = useState(false);
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [formErrors, setFormErrors] = useState<string[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const load = useCallback(async () => {
+        try {
+            setAddresses(await fetchAddresses());
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not load your addresses.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { void load(); }, [load]);
+
+    async function handleSave(event: React.FormEvent) {
+        event.preventDefault();
+        const errors = validate(form);
+        setFormErrors(errors);
+        if (errors.length > 0) return;
+
+        setIsSaving(true);
+        setError(null);
+        try {
+            await createAddress({ ...form, phone: form.phone.replace(/\D/g, '') });
+            setForm(EMPTY_FORM);
+            setIsAdding(false);
+            await load();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not save this address.');
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    async function handleDelete(id: string) {
+        setError(null);
+        try {
+            await deleteAddress(id);
+            await load();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not delete this address.');
+        }
+    }
+
+    async function handleSetDefault(id: string) {
+        setError(null);
+        try {
+            await setDefaultAddress(id);
+            await load();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Could not update the default.');
+        }
+    }
 
     return (
         <div className="animate-fade-in relative min-h-screen">
@@ -22,149 +121,149 @@ export default function AddressesPage() {
                 </button>
             </div>
 
-            {ADDRESSES.length === 0 ? (
+            {error && (
+                <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/50 bg-red-500/20 p-4 text-red-300">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {isLoading ? (
+                <div className="glass-panel rounded-2xl border border-white/10 p-10 text-center text-gray-400">
+                    Loading your addresses&hellip;
+                </div>
+            ) : addresses.length === 0 ? (
                 <div className="glass-panel rounded-2xl border border-white/10 p-10 text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-teal-500/10 text-teal-400 flex items-center justify-center border border-teal-500/20">
                         <MapPin className="w-7 h-7" />
                     </div>
                     <h2 className="text-xl font-bold text-white mb-2">No addresses saved</h2>
-                    <p className="text-sm text-gray-400">Add your first delivery address to speed up checkout.</p>
+                    <p className="text-sm text-gray-400">
+                        Add one here and it will be ready at checkout.
+                    </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {ADDRESSES.map((addr) => (
-                        <motion.div
-                            key={addr.id}
-                            layoutId={`addr-${addr.id}`}
-                            className={`relative p-6 rounded-2xl border-2 transition-all group ${addr.isDefault ? 'border-teal-500/50 bg-teal-500/5' : 'border-white/10 glass-panel hover:border-white/20'
-                                }`}
-                        >
-                            {addr.isDefault && (
-                                <div className="absolute -top-3 left-6 bg-teal-600 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                                    <CheckCircle className="w-3 h-3" /> Default
-                                </div>
-                            )}
-
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className={`p-2 rounded-lg ${addr.type === 'Home' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'}`}>
-                                        {addr.type === 'Home' ? <Home className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                <div className="grid gap-4 md:grid-cols-2">
+                    {addresses.map((address) => {
+                        const Icon = LABEL_ICON[address.label];
+                        return (
+                            <motion.div
+                                key={address.id}
+                                layout
+                                className="glass-panel rounded-2xl border border-white/10 p-5"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <Icon className="w-4 h-4 text-teal-400" />
+                                        <span className="text-sm font-bold capitalize text-white">
+                                            {address.label}
+                                        </span>
+                                        {address.isDefault && (
+                                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+                                                Default
+                                            </span>
+                                        )}
                                     </div>
-                                    <span className="font-bold text-white">{addr.type}</span>
-                                </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-teal-400 transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors">
+                                    <button
+                                        onClick={() => handleDelete(address.id)}
+                                        aria-label={`Delete address for ${address.recipientName}`}
+                                        className="text-gray-500 transition-colors hover:text-red-400"
+                                    >
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
-                            </div>
 
-                            <div className="space-y-1 mb-4">
-                                <p className="font-bold text-white">{addr.name}</p>
-                                <p className="text-sm text-gray-400">{addr.address}</p>
-                                <p className="text-sm text-gray-400">{addr.city} - {addr.pincode}</p>
-                                <p className="text-sm text-gray-500 mt-2">Phone: {addr.phone}</p>
-                            </div>
+                                <p className="mt-3 font-medium text-white">{address.recipientName}</p>
+                                <p className="text-sm text-gray-400">{address.phone}</p>
+                                <p className="mt-1 text-sm text-gray-400">
+                                    {address.line1}, {address.city} {address.pincode}
+                                </p>
 
-                            {!addr.isDefault && (
-                                <button className="text-xs font-bold text-teal-400 hover:text-teal-300 hover:underline">
-                                    Set as Default
-                                </button>
-                            )}
-                        </motion.div>
-                    ))}
+                                {!address.isDefault && (
+                                    <button
+                                        onClick={() => handleSetDefault(address.id)}
+                                        className="mt-4 flex items-center gap-1 text-xs font-bold text-teal-300 hover:text-teal-200"
+                                    >
+                                        <CheckCircle className="w-3 h-3" /> Set as default
+                                    </button>
+                                )}
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* Add Address Slide-over */}
             <AnimatePresence>
                 {isAdding && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsAdding(false)}
-                            className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ x: '100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed inset-y-0 right-0 w-full md:w-[400px] glass-dock z-50 shadow-2xl p-6 overflow-y-auto border-l border-white/10"
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                        <motion.form
+                            onSubmit={handleSave}
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="glass-panel w-full max-w-md rounded-2xl border border-white/10 p-6"
                         >
-                            <h2 className="text-xl font-bold text-white mb-6">Add New Address</h2>
+                            <h2 className="mb-4 text-lg font-bold text-white">Add an address</h2>
 
-                            <form className="space-y-4">
+                            {formErrors.length > 0 && (
+                                <ul className="mb-4 space-y-1 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">
+                                    {formErrors.map((message) => <li key={message}>{message}</li>)}
+                                </ul>
+                            )}
+
+                            <div className="space-y-3">
+                                <div className="flex gap-2">
+                                    {(['home', 'work', 'other'] as AddressLabel[]).map((label) => (
+                                        <button
+                                            key={label}
+                                            type="button"
+                                            onClick={() => setForm({ ...form, label })}
+                                            className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold capitalize transition-colors ${
+                                                form.label === label
+                                                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                                    : 'border border-white/10 text-gray-400'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {([
+                                    ['recipientName', 'Full name'],
+                                    ['phone', '10-digit mobile number'],
+                                    ['line1', 'Flat, building, street'],
+                                    ['city', 'City'],
+                                    ['pincode', '6-digit pincode'],
+                                ] as const).map(([field, placeholder]) => (
+                                    <input
+                                        key={field}
+                                        value={form[field]}
+                                        onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                                        placeholder={placeholder}
+                                        className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none"
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="mt-6 flex gap-3">
                                 <button
                                     type="button"
-                                    className="w-full py-3 border-2 border-dashed border-teal-500/30 rounded-xl text-teal-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-teal-500/10 transition-colors mb-6"
+                                    onClick={() => { setIsAdding(false); setFormErrors([]); }}
+                                    className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm font-bold text-gray-300"
                                 >
-                                    <Navigation className="w-4 h-4" /> Use My Current Location
+                                    Cancel
                                 </button>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Full Name</label>
-                                    <input type="text" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/50 transition-all text-white placeholder-gray-500" placeholder="John Doe" />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Phone Number</label>
-                                    <input type="tel" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/50 transition-all text-white placeholder-gray-500" placeholder="9876543210" />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Pincode</label>
-                                    <input type="text" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/50 transition-all text-white placeholder-gray-500" placeholder="110001" />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Address (House No, Building, Street)</label>
-                                    <textarea className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/50 transition-all text-white placeholder-gray-500 h-24" placeholder="Flat 101, Galaxy Apts..." />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">City / District</label>
-                                    <input type="text" className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-teal-500/50 transition-all text-white placeholder-gray-500" placeholder="New Delhi" />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Address Type</label>
-                                    <div className="flex gap-3">
-                                        {['Home', 'Work', 'Other'].map(type => (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                className="flex-1 py-2 rounded-lg border border-white/10 text-sm font-medium text-gray-300 hover:border-teal-500/50 hover:text-teal-400 focus:bg-teal-500/10 focus:border-teal-500/50 focus:text-teal-300 transition-all"
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAdding(false)}
-                                        className="flex-1 py-3 rounded-xl border border-white/10 text-gray-300 font-bold hover:bg-white/5 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 py-3 rounded-xl btn-gradient text-white font-bold hover:shadow-lg hover:shadow-teal-500/30 transition-all"
-                                    >
-                                        Save Address
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </>
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="btn-gradient flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                                >
+                                    {isSaving ? 'Saving…' : 'Save address'}
+                                </button>
+                            </div>
+                        </motion.form>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

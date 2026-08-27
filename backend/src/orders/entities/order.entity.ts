@@ -9,6 +9,7 @@ import {
     OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { moneyTransformer } from '../../common/transformers/decimal.transformer';
 
 export enum OrderStatus {
     CREATED = 'created',
@@ -32,8 +33,11 @@ export class Order {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ name: 'user_id', nullable: true })
-    userId: string | null;
+    // Integer, not string: users.id is a SERIAL primary key. The migration
+    // declared this column UUID, which made its foreign key to users(id)
+    // impossible to create.
+    @Column({ name: 'user_id', type: 'int', nullable: true })
+    userId: number | null;
 
     @ManyToOne(() => User, { nullable: true })
     @JoinColumn({ name: 'user_id' })
@@ -63,23 +67,27 @@ export class Order {
     })
     paymentStatus: PaymentStatus;
 
-    @Column({ name: 'total_amount', type: 'decimal', precision: 10, scale: 2 })
+    @Column({ name: 'total_amount', type: 'decimal', precision: 10, scale: 2, transformer: moneyTransformer })
     totalAmount: number;
 
-    @Column({ name: 'subtotal_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({ name: 'subtotal_amount', type: 'decimal', precision: 10, scale: 2, default: 0, transformer: moneyTransformer })
     subtotalAmount: number;
 
-    @Column({ name: 'tax_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({ name: 'tax_amount', type: 'decimal', precision: 10, scale: 2, default: 0, transformer: moneyTransformer })
     taxAmount: number;
 
-    @Column({ name: 'shipping_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({ name: 'shipping_amount', type: 'decimal', precision: 10, scale: 2, default: 0, transformer: moneyTransformer })
     shippingAmount: number;
 
-    @Column({ name: 'discount_amount', type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({ name: 'discount_amount', type: 'decimal', precision: 10, scale: 2, default: 0, transformer: moneyTransformer })
     discountAmount: number;
 
     @Column({ name: 'coupon_code', type: 'varchar', nullable: true })
     couponCode: string | null;
+
+    /** The prescription this order was dispensed against, when required. */
+    @Column({ name: 'prescription_id', type: 'uuid', nullable: true })
+    prescriptionId: string | null;
 
     @Column({ name: 'shipping_address', type: 'jsonb', nullable: true })
     shippingAddress: Record<string, any> | null;

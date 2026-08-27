@@ -68,7 +68,8 @@ CATEGORIES.forEach(cat => {
     }
 });
 
-const outputPath = path.join(__dirname, '../public/data/products.json');
+// Seed fixtures live outside public/ so Next.js never serves them to visitors.
+const outputPath = path.join(__dirname, 'data/products.json');
 const outputDir = path.dirname(outputPath);
 
 if (!fs.existsSync(outputDir)) {

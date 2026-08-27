@@ -41,6 +41,8 @@
     "backend",
     "backend/**/*",
     "trash",
-    "trash/**/*"
+    "trash/**/*",
+    "pos",
+    "pos/**/*"
   ]
 }

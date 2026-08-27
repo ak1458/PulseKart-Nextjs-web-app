@@ -20,6 +20,7 @@ import { Review } from './products/entities/review.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 import { CouponsModule } from './coupons/coupons.module';
 import { Coupon } from './coupons/entities/coupon.entity';
 import { CouponUsage } from './coupons/entities/coupon-usage.entity';
@@ -34,6 +35,12 @@ import { DatabaseModule } from './database/database.module';
 import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { SavedItemsModule } from './saved-items/saved-items.module';
+import { SavedItem } from './saved-items/entities/saved-item.entity';
+import { Address } from './addresses/entities/address.entity';
+import { Prescription } from './prescriptions/entities/prescription.entity';
 
 @Module({
     imports: [
@@ -73,6 +80,7 @@ import { OrderItem } from './orders/entities/order-item.entity';
                 Review,
                 // User entities
                 User,
+                PasswordResetToken,
                 // Coupon entities
                 Coupon,
                 CouponUsage,
@@ -85,6 +93,12 @@ import { OrderItem } from './orders/entities/order-item.entity';
                 // Order entities
                 Order,
                 OrderItem,
+                // Prescription entities
+                Prescription,
+                // Address entities
+                Address,
+                // Saved item entities
+                SavedItem,
             ],
             synchronize: process.env.DB_SYNC === 'true', // Controlled by env var
             // Connection pooling
@@ -103,6 +117,9 @@ import { OrderItem } from './orders/entities/order-item.entity';
         ReportsModule,
         PaymentsModule,
         OrdersModule,
+        PrescriptionsModule,
+        AddressesModule,
+        SavedItemsModule,
         DatabaseModule, // Seeds admin user on startup
     ],
     controllers: [AppController],

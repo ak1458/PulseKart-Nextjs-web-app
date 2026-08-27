@@ -18,6 +18,7 @@ import {
     Activity
 } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAuthHeaders } from '@/context/AuthContext';
 
 interface Message {
     id: string;
@@ -25,6 +26,7 @@ interface Message {
     content: string;
     timestamp: Date;
     actions?: Action[];
+    isError?: boolean;
 }
 
 interface Action {
@@ -76,7 +78,7 @@ export default function AIWorkerPage() {
         try {
             const response = await fetch('/api/ai/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     messages: newMessages.map(m => ({ role: m.role, content: m.content }))
                 })
@@ -98,22 +100,21 @@ export default function AIWorkerPage() {
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch (error) {
+            // Surface the failure. This previously replaced any error with a
+            // reassuring "I'm currently in demo mode" message, which hid
+            // misconfiguration and expired sessions behind what looked like
+            // normal assistant behaviour.
             console.error('Failed to send message:', error);
-            // Simulate response if API fails/is mocked
-            setTimeout(() => {
-                const mockMsg: Message = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: "I'm currently in demo mode. I can help you navigate the system, but I can't execute live actions just yet.",
-                    timestamp: new Date()
-                };
-                setMessages(prev => [...prev, mockMsg]);
-                setIsTyping(false);
-            }, 1000);
-            return; // Exit here as we handled the error mock
+            setMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: error instanceof Error
+                    ? `Request failed: ${error.message}`
+                    : 'Request failed for an unknown reason.',
+                timestamp: new Date(),
+                isError: true,
+            }]);
         } finally {
-            // Only stop typing if successful (error case handled above separately)
-            // But for now, let's ensure it stops
             setIsTyping(false);
         }
     };

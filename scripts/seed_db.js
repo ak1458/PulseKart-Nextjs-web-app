@@ -30,7 +30,7 @@ async function seed() {
         console.log(`Warehouse ID: ${warehouseId}`);
 
         // 2. Read products.json
-        const productsPath = path.join(__dirname, '../public/data/products.json');
+        const productsPath = path.join(__dirname, 'data/products.json');
         if (!fs.existsSync(productsPath)) {
             console.error('products.json not found! Run generate_data.js first.');
             process.exit(1);

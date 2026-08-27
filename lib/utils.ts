@@ -107,8 +107,26 @@ export function isEmpty(value: unknown): boolean {
 }
 
 /**
- * Generate a unique ID
+ * Generate a unique ID.
+ *
+ * Suitable for React keys and client-side correlation only. It is not
+ * collision-safe and must not be used to mint order, invoice or payment
+ * identifiers - use a server-generated UUID for anything persisted.
  */
 export function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Determine whether a product requires a prescription.
+ *
+ * The backend Product entity spells this `prescription_required`, while parts
+ * of the frontend use `requiresPrescription`. Reading only one spelling means
+ * the checkout prescription gate silently passes for restricted medicines, so
+ * accept either and default to `false` only when neither is present.
+ */
+export function isPrescriptionProduct(product: unknown): boolean {
+    if (!product || typeof product !== 'object') return false;
+    const p = product as Record<string, unknown>;
+    return p.prescription_required === true || p.requiresPrescription === true;
 }

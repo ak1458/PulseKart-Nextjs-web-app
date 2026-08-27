@@ -27,21 +27,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GlobalSearch from '@/components/admin/GlobalSearch';
 import { useAuth } from '@/context/AuthContext';
 
+/**
+ * Admin navigation.
+ *
+ * Every entry here resolves to a page backed by a real API module. Warehouse AI,
+ * Rules Engine, Delivery, Finance, Payroll, CMS, Exports, Returns, Attendance,
+ * Pharmacist and Support were removed along with their pages: they rendered
+ * finished-looking UI over endpoints that do not exist (/api/v1/cms/pages,
+ * /api/v1/delivery/zones, /api/v1/finance/dashboard and friends all 404), or
+ * over arrays hardcoded to empty. Back-office concerns belong to the POS
+ * product; rebuild them there against real endpoints.
+ */
 const MENU_ITEMS = [
-    { name: 'AI Worker', icon: Bot, path: '/admin/ai' },
-    { name: 'Analytics', icon: BarChart2, path: '/admin/analytics' },
     { name: 'Overview', icon: LayoutDashboard, path: '/admin' },
+    { name: 'Analytics', icon: BarChart2, path: '/admin/analytics' },
     { name: 'Orders', icon: ShoppingBag, path: '/admin/orders' },
     { name: 'Prescriptions', icon: FileText, path: '/admin/prescriptions' },
     { name: 'Products', icon: Package, path: '/admin/products' },
     { name: 'Inventory', icon: Activity, path: '/admin/inventory' },
-    { name: 'Warehouse AI', icon: Layers, path: '/admin/warehouse' },
-    { name: 'Rules Engine', icon: Zap, path: '/admin/rules' },
     { name: 'Coupons', icon: Tag, path: '/admin/coupons' },
-    { name: 'Delivery', icon: Truck, path: '/admin/delivery' },
-    { name: 'Finance', icon: CreditCard, path: '/admin/finance' },
     { name: 'Users', icon: Users, path: '/admin/users' },
-    { name: 'Support', icon: MessageSquare, path: '/admin/support' },
+    { name: 'AI Worker', icon: Bot, path: '/admin/ai' },
     { name: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 

@@ -21,7 +21,7 @@ import {
   Pill,
 } from "@/lib/icons";
 import { IconEyeOff } from "@tabler/icons-react";
-import { useAuth } from "@/context/AuthContext";
+import { MIN_PASSWORD_LENGTH, useAuth } from "@/context/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -60,8 +60,8 @@ export default function SignupPage() {
       setFormError("Email is required");
       return;
     }
-    if (!formData.password || formData.password.length < 6) {
-      setFormError("Password must be at least 6 characters");
+    if (!formData.password || formData.password.length < MIN_PASSWORD_LENGTH) {
+      setFormError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
     if (formData.password !== formData.confirmPassword) {

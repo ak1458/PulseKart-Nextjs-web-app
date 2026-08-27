@@ -3,6 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
@@ -10,9 +13,10 @@ import { LoginDto } from './dto/login.dto';
 @Injectable()
 export class AuthService {
     private readonly logger = new Logger(AuthService.name);
-    private readonly resetTokens = new Map<string, { userId: number; expires: Date }>();
 
     constructor(
+        @InjectRepository(PasswordResetToken)
+        private readonly resetTokenRepository: Repository<PasswordResetToken>,
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
@@ -119,9 +123,20 @@ export class AuthService {
         const resetToken = crypto.randomBytes(32).toString('hex');
         const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-        // Store token with expiration (1 hour)
-        const expires = new Date(Date.now() + 60 * 60 * 1000);
-        this.resetTokens.set(tokenHash, { userId: user.id, expires });
+        // Store token with expiration (1 hour). Persisted rather than held in
+        // memory so the link survives a restart and works behind more than one
+        // instance.
+        await this.resetTokenRepository.save(
+            this.resetTokenRepository.create({
+                tokenHash,
+                userId: user.id,
+                expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+            }),
+        );
+
+        // Opportunistically evict expired rows so the table does not grow
+        // without bound, which the in-memory map also never did.
+        await this.resetTokenRepository.delete({ expiresAt: LessThan(new Date()) });
 
         // Send reset email
         const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
@@ -155,23 +170,26 @@ export class AuthService {
 
         // Hash the provided token to match stored hash
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const resetData = this.resetTokens.get(tokenHash);
+        const resetData = await this.resetTokenRepository.findOne({
+            where: { tokenHash },
+        });
 
-        if (!resetData) {
+        if (!resetData || resetData.usedAt !== null) {
             throw new UnauthorizedException('Invalid or expired reset token');
         }
 
         // Check if token is expired
-        if (new Date() > resetData.expires) {
-            this.resetTokens.delete(tokenHash);
+        if (new Date() > resetData.expiresAt) {
+            await this.resetTokenRepository.delete({ id: resetData.id });
             throw new UnauthorizedException('Reset token has expired');
         }
 
         // Update user password
         await this.usersService.updatePassword(resetData.userId, newPassword);
 
-        // Invalidate the used token
-        this.resetTokens.delete(tokenHash);
+        // Burn the token so it cannot be replayed.
+        resetData.usedAt = new Date();
+        await this.resetTokenRepository.save(resetData);
 
         this.logger.log(`Password reset successful for user ID: ${resetData.userId}`);
         return { message: 'Password has been reset successfully' };

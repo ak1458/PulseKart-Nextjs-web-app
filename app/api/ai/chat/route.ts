@@ -1,78 +1,94 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { serverApiUrl } from '@/lib/api';
 
-export async function POST(req: Request) {
-    let messages: any[] = [];
+const SYSTEM_PROMPT = `You are the AI Admin Worker for PulseKart, a pharmacy and e-commerce platform.
+
+You do not have access to live order, inventory or prescription data. Never
+invent counts, totals, stock levels or patient details - if you are asked for
+figures you have not been given, say plainly that you cannot see that data yet
+and describe what the operator should check instead.
+
+Keep responses concise and professional.`;
+
+/**
+ * Confirm the caller is a signed-in admin.
+ *
+ * This route was previously unauthenticated: any anonymous request could drive
+ * an OpenAI completion against the deployment's API key.
+ */
+async function requireAdmin(req: Request): Promise<boolean> {
+    const authorization = req.headers.get('authorization');
+    if (!authorization?.startsWith('Bearer ')) return false;
+
     try {
-        const apiKey = process.env.OPENAI_API_KEY;
-        const body = await req.json();
-        messages = body.messages;
-
-        // Mock Mode if no key or explicit mock request
-        if (!apiKey || apiKey.includes('placeholder')) {
-            throw new Error('MOCK_MODE');
-        }
-
-        const openai = new OpenAI({ apiKey });
-
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "system",
-                    content: `You are the AI Admin Worker for PulseKart, a pharmacy and e-commerce platform.
-                    You have access to the following capabilities (simulated):
-                    - Check orders, inventory, prescriptions.
-                    - Execute actions like approving Rx, refunding orders, updating stock.
-                    
-                    When the user asks to perform an action, respond with a JSON object in the 'actions' field of your response (if possible) or just describe what you would do.
-                    
-                    For this MVP, you are a helpful assistant. If the user asks for data, simulate a realistic response based on a pharmacy context.
-                    
-                    Keep responses concise and professional.`
-                },
-                ...messages
-            ],
+        const res = await fetch(serverApiUrl('auth/me'), {
+            headers: { authorization, 'Content-Type': 'application/json' },
+            cache: 'no-store',
         });
-
-        const aiMessage = completion.choices[0].message.content;
-
-        return NextResponse.json({
-            role: 'assistant',
-            content: aiMessage,
-            actions: extractActions(aiMessage || '')
-        });
-
-    } catch (error: any) {
-        console.warn('AI Service Error (Falling back to Mock):', error.message);
-
-        // Fallback Mock Logic
-        // Fallback Mock Logic
-        const safeMessages = Array.isArray(messages) ? messages : [];
-        const lastUserMsg = safeMessages[safeMessages.length - 1]?.content?.toLowerCase() || '';
-        let mockContent = "I'm currently running in Offline Mode (Mock). I can't process complex reasoning right now, but I can help you navigate.";
-        let mockActions: any[] = [];
-
-        if (lastUserMsg.includes('order')) {
-            mockContent = "I found 5 pending orders. Would you like to review them?";
-            mockActions = [{ id: 'view-orders', label: 'View Orders', type: 'primary' }];
-        } else if (lastUserMsg.includes('inventory') || lastUserMsg.includes('stock')) {
-            mockContent = "Inventory status: 98% healthy. 3 items are low on stock.";
-            mockActions = [{ id: 'restock', label: 'Restock Low Items', type: 'primary' }];
-        } else if (lastUserMsg.includes('approve')) {
-            mockContent = "I've approved the pending items.";
-        }
-
-        return NextResponse.json({
-            role: 'assistant',
-            content: mockContent,
-            actions: mockActions,
-            isMock: true
-        });
+        if (!res.ok) return false;
+        const user = await res.json();
+        return user?.role === 'admin';
+    } catch {
+        return false;
     }
 }
 
-function extractActions(text: string) {
-    if (text.toLowerCase().includes('approve')) return [{ id: 'approve', label: 'Approve', type: 'primary' }];
-    return undefined;
+export async function POST(req: Request) {
+    if (!(await requireAdmin(req))) {
+        return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 },
+        );
+    }
+
+    let body: { messages?: unknown };
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'Malformed request body' }, { status: 400 });
+    }
+
+    const messages = body.messages;
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return NextResponse.json(
+            { error: '`messages` must be a non-empty array' },
+            { status: 400 },
+        );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey || apiKey.includes('placeholder')) {
+        // Report the misconfiguration rather than answering anyway. The previous
+        // version fell through to canned replies such as "Inventory status: 98%
+        // healthy" and "I found 5 pending orders", rendered in the admin console
+        // indistinguishably from real figures. Fabricated operational numbers in
+        // a pharmacy back-office are worse than no answer.
+        return NextResponse.json(
+            {
+                error: 'The AI assistant is not configured. Set OPENAI_API_KEY to enable it.',
+                configured: false,
+            },
+            { status: 503 },
+        );
+    }
+
+    try {
+        const openai = new OpenAI({ apiKey });
+        const completion = await openai.chat.completions.create({
+            model: process.env.OPENAI_MODEL || 'gpt-4o',
+            messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+        });
+
+        return NextResponse.json({
+            role: 'assistant',
+            content: completion.choices[0]?.message?.content ?? '',
+        });
+    } catch (error) {
+        console.error('AI completion failed:', error);
+        return NextResponse.json(
+            { error: 'The AI assistant is temporarily unavailable.' },
+            { status: 502 },
+        );
+    }
 }

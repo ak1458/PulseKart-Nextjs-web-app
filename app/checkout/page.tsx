@@ -20,39 +20,55 @@ import { useCart } from '@/context/CartContext';
 import { getProductImage } from '@/lib/images';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SHIPPING_CONFIG, VALID_COUPONS } from '@/lib/constants';
+import { PRICING_COPY } from '@/lib/constants';
 import { safeNumber } from '@/lib/utils';
+import {
+    fetchQuote,
+    placeOrder,
+    uploadPrescription,
+    isSignedIn,
+    type OrderQuote,
+} from '@/lib/checkout-api';
+import { fetchAddresses, createAddress, type Address } from '@/lib/addresses-api';
 
-interface Address {
-    id: number;
-    type: string;
+// Address shape comes from lib/addresses-api so checkout and the dashboard
+// agree on one definition. Addresses used to live only in this component's
+// state and vanished on refresh.
+
+type PaymentMethod = 'UPI' | 'CARD' | 'COD';
+
+/** The inline "add an address" form, before it is mapped onto an Address. */
+interface AddressFormValues {
     name: string;
     phone: string;
     address: string;
     city: string;
     pincode: string;
-    isDefault: boolean;
+    type: string;
 }
 
-type PaymentMethod = 'UPI' | 'CARD' | 'COD';
-
-// Address Form Validation
-const validateAddress = (address: Omit<Address, 'id' | 'isDefault'>): string[] => {
+/**
+ * Validate the inline address form.
+ *
+ * Mirrors backend/src/addresses/dto/address.dto.ts, including the leading
+ * 6-9 rule for Indian mobile numbers that the previous `^\d{10}$` missed.
+ */
+const validateAddress = (address: AddressFormValues): string[] => {
     const errors: string[] = [];
 
-    if (!address.name || address.name.length < 2) {
+    if (!address.name || address.name.trim().length < 2) {
         errors.push('Name must be at least 2 characters');
     }
 
-    if (!address.phone || !/^\d{10}$/.test(address.phone.replace(/\D/g, ''))) {
-        errors.push('Phone must be 10 digits');
+    if (!address.phone || !/^[6-9]\d{9}$/.test(address.phone.replace(/\D/g, ''))) {
+        errors.push('Enter a valid 10-digit mobile number');
     }
 
-    if (!address.address || address.address.length < 10) {
+    if (!address.address || address.address.trim().length < 10) {
         errors.push('Address must be at least 10 characters');
     }
 
-    if (!address.city || address.city.length < 2) {
+    if (!address.city || address.city.trim().length < 2) {
         errors.push('City is required');
     }
 
@@ -75,20 +91,23 @@ function ShoppingBag({ className }: { className?: string }) {
 function CheckoutPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { cart } = useCart();
+    const { cart, clearCart } = useCart();
 
     // State
     const [step, setStep] = useState(1);
-    const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
+    const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI');
     const [isProcessing, setIsProcessing] = useState(false);
     const [showRxModal, setShowRxModal] = useState(false);
     const [offerCode, setOfferCode] = useState('');
-    const [isOfferApplied, setIsOfferApplied] = useState(false);
+    // The code that was actually applied, captured at apply time. Storing a
+    // boolean meant editing the input afterwards kept the discount alive while
+    // the code it came from no longer existed.
+    const [appliedCode, setAppliedCode] = useState<string | null>(null);
     const [showOfferInput, setShowOfferInput] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Address State
+    // Address State - loaded from the customer's saved address book.
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
     const [showAddressModal, setShowAddressModal] = useState(false);
     const [newAddress, setNewAddress] = useState({
@@ -102,12 +121,36 @@ function CheckoutPageContent() {
     const [addressErrors, setAddressErrors] = useState<string[]>([]);
 
     // Rx Upload State
-    const [isRxUploaded, setIsRxUploaded] = useState(false);
+    const [prescriptionId, setPrescriptionId] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const isRxUploaded = prescriptionId !== null;
+
+    // Server pricing
+    const [quote, setQuote] = useState<OrderQuote | null>(null);
+    const [isPricing, setIsPricing] = useState(false);
+    const [quoteError, setQuoteError] = useState<string | null>(null);
 
     // COD Modal State
     const [showCODModal, setShowCODModal] = useState(false);
     const [codModalDismissed, setCodModalDismissed] = useState(false);
+
+    // Load the saved address book and preselect the default, so a returning
+    // customer does not retype an address they have already given us.
+    useEffect(() => {
+        if (!isSignedIn()) return;
+
+        let cancelled = false;
+        fetchAddresses()
+            .then(result => {
+                if (cancelled) return;
+                setSavedAddresses(result);
+                const preferred = result.find(a => a.isDefault) ?? result[0];
+                if (preferred) setSelectedAddress(preferred.id);
+            })
+            .catch(() => { /* the empty state and the add form still work */ });
+
+        return () => { cancelled = true; };
+    }, []);
 
     // Sync payment method with URL
     useEffect(() => {
@@ -125,45 +168,68 @@ function CheckoutPageContent() {
         }
     }, [paymentMethod, codModalDismissed]);
 
-    // Safe cart total calculation
-    const safeCartTotal = useMemo(() => {
-        return cart.reduce((acc, item) => {
-            const price = safeNumber(item.price, 0);
-            const qty = safeNumber(item.qty, 0);
-            return acc + (price * qty);
-        }, 0);
-    }, [cart]);
+    // The line items the server needs in order to price the cart. It resolves
+    // unit prices from the catalogue itself - deliberately not sent from here.
+    const quoteItems = useMemo(
+        () => cart.map(item => ({ productId: item.id, quantity: item.qty })),
+        [cart],
+    );
 
-    // Delivery and discount calculations
-    const deliveryFee = useMemo(() => {
-        return safeCartTotal >= SHIPPING_CONFIG.FREE_THRESHOLD_INR ? 0 : SHIPPING_CONFIG.BASE_DELIVERY_FEE_INR;
-    }, [safeCartTotal]);
+    // Server-authoritative pricing. Delivery thresholds, COD fees and discount
+    // rules used to be duplicated in lib/constants.ts and recomputed in the
+    // browser, which meant the customer's device decided what an order cost and
+    // the two copies had already drifted. The page now renders what the API
+    // returns and calculates none of it.
+    useEffect(() => {
+        if (cart.length === 0 || !isSignedIn()) return;
 
-    const codFee = useMemo(() => {
-        return paymentMethod === 'COD' ? SHIPPING_CONFIG.COD_FEE_INR : 0;
-    }, [paymentMethod]);
+        let cancelled = false;
+        setIsPricing(true);
 
-    const discount = useMemo(() => {
-        if (isOfferApplied) {
-            return Math.round(safeCartTotal * (SHIPPING_CONFIG.COUPON_DISCOUNT_PERCENT / 100));
-        }
-        if (paymentMethod === 'UPI') {
-            return Math.round(safeCartTotal * (SHIPPING_CONFIG.UPI_DISCOUNT_PERCENT / 100));
-        }
-        return 0;
-    }, [safeCartTotal, isOfferApplied, paymentMethod]);
+        fetchQuote({
+            items: quoteItems,
+            paymentMethod,
+            couponCode: appliedCode ?? undefined,
+        })
+            .then(result => {
+                if (cancelled) return;
+                setQuote(result);
+                setQuoteError(null);
+            })
+            .catch((err: Error) => {
+                if (cancelled) return;
+                setQuote(null);
+                setQuoteError(err.message);
+            })
+            .finally(() => {
+                if (!cancelled) setIsPricing(false);
+            });
 
-    const finalTotal = useMemo(() => {
-        return Math.max(0, safeCartTotal + deliveryFee + codFee - discount);
-    }, [safeCartTotal, deliveryFee, codFee, discount]);
+        return () => { cancelled = true; };
+    }, [quoteItems, paymentMethod, appliedCode, cart.length]);
 
-    // Prescription requirement - determined by product metadata
-    // TODO: Replace with actual prescription check from product data (item.requiresPrescription)
-    const requiresPrescription = useMemo(() => {
-        return cart.some(item => item.requiresPrescription === true);
-    }, [cart]);
+    const isOfferApplied = appliedCode !== null && quote?.couponCode === appliedCode;
 
-    const handleAddAddress = (e: React.FormEvent) => {
+    // Fall back to a bare item subtotal only for the pre-sign-in preview; the
+    // authoritative figures always come from the quote.
+    const safeCartTotal = useMemo(
+        () => cart.reduce((acc, item) => acc + safeNumber(item.price, 0) * safeNumber(item.qty, 0), 0),
+        [cart],
+    );
+
+    const subtotal = quote?.subtotal ?? safeCartTotal;
+    const deliveryFee = quote?.deliveryFee ?? 0;
+    const codFee = quote?.codFee ?? 0;
+    const discount = quote?.discount ?? 0;
+    const tax = quote?.tax ?? 0;
+    const finalTotal = quote?.total ?? safeCartTotal;
+
+    // Prescription status comes from the catalogue via the quote when we have
+    // one, falling back to the flag carried on the cart item.
+    const requiresPrescription = quote?.requiresPrescription
+        ?? cart.some(item => item.requiresPrescription === true);
+
+    const handleAddAddress = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setAddressErrors([]);
@@ -174,15 +240,25 @@ function CheckoutPageContent() {
             return;
         }
 
-        const address: Address = {
-            id: savedAddresses.length + 1,
-            ...newAddress,
-            isDefault: false
-        };
-        setSavedAddresses([...savedAddresses, address]);
-        setSelectedAddress(address.id);
-        setShowAddressModal(false);
-        setNewAddress({ name: '', phone: '', address: '', city: '', pincode: '', type: 'Home' });
+        try {
+            // Persisted rather than pushed into local state with
+            // `id: savedAddresses.length + 1`, which collided after a delete
+            // and was lost on refresh.
+            const saved = await createAddress({
+                label: newAddress.type.toLowerCase() as 'home' | 'work' | 'other',
+                recipientName: newAddress.name,
+                phone: newAddress.phone.replace(/\D/g, ''),
+                line1: newAddress.address,
+                city: newAddress.city,
+                pincode: newAddress.pincode,
+            });
+            setSavedAddresses(prev => [...prev, saved]);
+            setSelectedAddress(saved.id);
+            setShowAddressModal(false);
+            setNewAddress({ name: '', phone: '', address: '', city: '', pincode: '', type: 'Home' });
+        } catch (err) {
+            setAddressErrors([err instanceof Error ? err.message : 'Could not save this address.']);
+        }
     };
 
     const switchToUPI = () => {
@@ -196,7 +272,7 @@ function CheckoutPageContent() {
         setCodModalDismissed(true);
     };
 
-    const handlePayment = (bypassRx = false) => {
+    const handlePayment = async () => {
         setError(null);
 
         if (step === 1) {
@@ -204,28 +280,49 @@ function CheckoutPageContent() {
             return;
         }
 
-        if (requiresPrescription && !isRxUploaded && !bypassRx) {
+        if (!isSignedIn()) {
+            router.push(`/login?redirect=${encodeURIComponent('/checkout')}`);
+            return;
+        }
+
+        // Re-derived from state rather than accepting a `bypassRx` argument
+        // from the caller. The Rx modal's confirm button passed `true`, so the
+        // gate's outcome depended on the call site being trustworthy - a
+        // disabled attribute on a button is a UI hint, not an enforcement point.
+        // The server enforces this independently in CheckoutService.
+        if (requiresPrescription && !isRxUploaded) {
             setShowRxModal(true);
             return;
         }
 
-        if (!selectedAddress) {
+        const address = savedAddresses.find(a => a.id === selectedAddress);
+        if (!address) {
             setError('Please select a delivery address');
             return;
         }
 
-        if (finalTotal <= 0) {
-            setError('Invalid order total');
-            return;
-        }
-
         setIsProcessing(true);
-        // TODO: Integrate with actual payment gateway (Razorpay/Stripe)
-        // After successful payment: router.push('/order-confirmation');
-        setTimeout(() => {
+        try {
+            // Creates a real order: prices from the catalogue, validates the
+            // coupon, enforces the prescription rule and decrements batch stock
+            // in one transaction. This previously resolved a 2 second timer and
+            // navigated to the confirmation page having persisted nothing.
+            const order = await placeOrder({
+                items: quoteItems,
+                paymentMethod,
+                couponCode: appliedCode ?? undefined,
+                prescriptionId: prescriptionId ?? undefined,
+                shippingAddress: { ...address },
+            });
+
+            clearCart();
+            router.push(`/order-confirmation?orderId=${encodeURIComponent(order.id)}`);
+        } catch (err) {
+            // Surfaced rather than swallowed: an out-of-stock item or a coupon
+            // that expired between pricing and submission must be visible.
+            setError(err instanceof Error ? err.message : 'We could not place your order.');
             setIsProcessing(false);
-            router.push('/order-confirmation');
-        }, 2000);
+        }
     };
 
     // Valid file types for prescription upload
@@ -253,24 +350,24 @@ function CheckoutPageContent() {
             return;
         }
 
+        if (!isSignedIn()) {
+            router.push(`/login?redirect=${encodeURIComponent('/checkout')}`);
+            return;
+        }
+
         setIsUploading(true);
         setError(null);
 
         try {
-            // TODO: Implement actual file upload to server
-            // const formData = new FormData();
-            // formData.append('prescription', file);
-            // const response = await fetch('/api/upload-prescription', { 
-            //     method: 'POST', 
-            //     body: formData 
-            // });
-            // if (!response.ok) throw new Error('Upload failed');
-            
-            // Simulate upload delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setIsRxUploaded(true);
+            // A real upload. This used to await a 1500ms timer and flip a
+            // boolean - the file never left the browser, so no prescription was
+            // ever retained against the order, which a pharmacy is required to
+            // keep. The server re-validates type and size and checks the file's
+            // magic number against its declared MIME type.
+            const prescription = await uploadPrescription(file);
+            setPrescriptionId(prescription.id);
         } catch (err) {
-            setError('Failed to upload prescription. Please try again.');
+            setError(err instanceof Error ? err.message : 'Failed to upload prescription.');
         } finally {
             setIsUploading(false);
         }
@@ -371,11 +468,11 @@ function CheckoutPageContent() {
                                                     </div>
                                                 )}
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    {addr.type === 'Home' ? <Home className="w-4 h-4 text-teal-300" /> : <Briefcase className="w-4 h-4 text-teal-300" />}
-                                                    <span className="font-bold text-white">{addr.type}</span>
+                                                    {addr.label === 'work' ? <Briefcase className="w-4 h-4 text-teal-300" /> : <Home className="w-4 h-4 text-teal-300" />}
+                                                    <span className="font-bold text-white capitalize">{addr.label}</span>
                                                 </div>
-                                                <p className="text-sm font-bold text-white">{addr.name}</p>
-                                                <p className="text-sm text-gray-400 line-clamp-2">{addr.address}, {addr.city} - {addr.pincode}</p>
+                                                <p className="text-sm font-bold text-white">{addr.recipientName}</p>
+                                                <p className="text-sm text-gray-400 line-clamp-2">{addr.line1}, {addr.city} - {addr.pincode}</p>
                                                 <p className="text-sm text-gray-500 mt-1">Phone: {addr.phone}</p>
                                             </div>
                                         ))}
@@ -406,12 +503,18 @@ function CheckoutPageContent() {
                                 </div>
                             )}
 
-                            {step === 2 && selectedAddress && (
-                                <div className="text-sm text-gray-300">
-                                    <p className="font-bold text-white">{savedAddresses.find(a => a.id === selectedAddress)?.name}</p>
-                                    <p className="text-gray-400">{savedAddresses.find(a => a.id === selectedAddress)?.address}</p>
-                                </div>
-                            )}
+                            {step === 2 && selectedAddress && (() => {
+                                const chosen = savedAddresses.find(a => a.id === selectedAddress);
+                                if (!chosen) return null;
+                                return (
+                                    <div className="text-sm text-gray-300">
+                                        <p className="font-bold text-white">{chosen.recipientName}</p>
+                                        <p className="text-gray-400">
+                                            {chosen.line1}, {chosen.city} - {chosen.pincode}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Payment Section */}
@@ -443,7 +546,7 @@ function CheckoutPageContent() {
                                             </div>
                                             <p className="text-xs text-emerald-300 font-bold bg-emerald-500/20 inline-block px-2 py-0.5 rounded border border-emerald-500/30">Fastest Confirmation ⚡</p>
                                             {paymentMethod === 'UPI' && (
-                                                <p className="text-xs text-teal-300 font-bold mt-2 animate-pulse">You are saving {SHIPPING_CONFIG.UPI_DISCOUNT_PERCENT}% with UPI!</p>
+                                                <p className="text-xs text-teal-300 font-bold mt-2 animate-pulse">You are saving {PRICING_COPY.UPI_DISCOUNT_PERCENT}% with UPI!</p>
                                             )}
                                         </div>
                                     </label>
@@ -473,7 +576,7 @@ function CheckoutPageContent() {
                                         <div className="flex-1">
                                             <span className="font-bold text-white block">Cash on Delivery</span>
                                             {paymentMethod === 'COD' && (
-                                                <p className="text-xs text-orange-300 mt-1">Note: ₹{SHIPPING_CONFIG.COD_FEE_INR} Handling fee applies for COD orders.</p>
+                                                <p className="text-xs text-orange-300 mt-1">Note: ₹{PRICING_COPY.COD_FEE_INR} Handling fee applies for COD orders.</p>
                                             )}
                                         </div>
                                     </label>
@@ -536,13 +639,25 @@ function CheckoutPageContent() {
                                                     type="text"
                                                     placeholder="Enter code"
                                                     value={offerCode}
-                                                    onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
+                                                    onChange={(e) => {
+                                                        setOfferCode(e.target.value.toUpperCase());
+                                                        // Editing the code retracts the applied discount
+                                                        // until Apply is pressed again.
+                                                        setAppliedCode(null);
+                                                    }}
                                                     className="flex-1 bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent uppercase"
                                                 />
                                                 <button
                                                     onClick={() => {
-                                                        // Validate promo code using VALID_COUPONS constant
-                                                        setIsOfferApplied(offerCode in VALID_COUPONS);
+                                                        // Object.hasOwn, not `in`: `in` walks the prototype
+                                                        // chain, so "toString" and "constructor" were both
+                                                        // accepted as valid coupon codes.
+                                                        // The server decides whether a code is valid;
+                                                        // re-quoting reflects the outcome. The old
+                                                        // client-side list knew nothing about expiry,
+                                                        // usage limits or minimum order value.
+                                                        const code = offerCode.trim();
+                                                        setAppliedCode(code.length > 0 ? code : null);
                                                     }}
                                                     className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors"
                                                 >
@@ -653,16 +768,16 @@ function CheckoutPageContent() {
                                     <AlertCircle className="w-8 h-8" />
                                 </motion.div>
 
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Aww... COD has a ₹{SHIPPING_CONFIG.COD_FEE_INR} fee</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">Aww... COD has a ₹{PRICING_COPY.COD_FEE_INR} fee</h3>
                                 <p className="text-gray-500 text-sm mb-6">
-                                    Handling cash costs extra. But wait! You can save <span className="font-bold text-green-600">{SHIPPING_CONFIG.UPI_DISCOUNT_PERCENT}% instantly</span> if you pay online.
+                                    Handling cash costs extra. But wait! You can save <span className="font-bold text-green-600">{PRICING_COPY.UPI_DISCOUNT_PERCENT}% instantly</span> if you pay online.
                                 </p>
 
                                 <button
                                     onClick={switchToUPI}
                                     className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-200 mb-3 flex items-center justify-center gap-2 group"
                                 >
-                                    <span>Pay via UPI & Save {SHIPPING_CONFIG.UPI_DISCOUNT_PERCENT}%</span>
+                                    <span>Pay via UPI & Save {PRICING_COPY.UPI_DISCOUNT_PERCENT}%</span>
                                     <Zap className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
                                 </button>
 
@@ -670,7 +785,7 @@ function CheckoutPageContent() {
                                     onClick={continueWithCOD}
                                     className="text-xs text-gray-400 font-medium hover:text-gray-600 hover:underline"
                                 >
-                                    I&apos;ll pay ₹{SHIPPING_CONFIG.COD_FEE_INR} extra, continue with COD
+                                    I&apos;ll pay ₹{PRICING_COPY.COD_FEE_INR} extra, continue with COD
                                 </button>
                             </div>
                         </motion.div>
@@ -856,7 +971,7 @@ function CheckoutPageContent() {
 
                             <div className="space-y-3">
                                 <button
-                                    onClick={() => { setShowRxModal(false); handlePayment(true); }}
+                                    onClick={() => { setShowRxModal(false); handlePayment(); }}
                                     disabled={!isRxUploaded || isUploading}
                                     className={`w-full py-3 font-bold rounded-xl transition-colors ${isRxUploaded ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                                 >

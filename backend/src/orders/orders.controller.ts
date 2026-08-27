@@ -7,12 +7,21 @@ import {
     Body,
     Param,
     Query,
+    Req,
     UseGuards,
     HttpCode,
     HttpStatus,
     ValidationPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { OrdersService } from './orders.service';
+import { CheckoutService } from './checkout.service';
+import { CheckoutDto, QuoteDto } from './dto/checkout.dto';
+
+interface AuthenticatedRequest {
+    user: { sub: number; role: string };
+}
+
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderFiltersDto } from './dto/order-filters.dto';
@@ -34,7 +43,53 @@ import { JwtAuthGuard, AdminGuard } from '../auth/jwt-auth.guard';
  */
 @Controller('v1/orders')
 export class OrdersController {
-    constructor(private readonly ordersService: OrdersService) { }
+    constructor(
+        private readonly ordersService: OrdersService,
+        private readonly checkoutService: CheckoutService,
+    ) { }
+
+    /**
+     * Price a cart.
+     *
+     * Authenticated customers only - coupon eligibility is per user. The
+     * response is the only pricing the storefront should display; it must not
+     * recompute totals locally.
+     */
+    @Post('quote')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async quote(
+        @Req() req: AuthenticatedRequest,
+        @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: QuoteDto,
+    ) {
+        return this.checkoutService.quote(req.user.sub, dto);
+    }
+
+    /**
+     * Place an order.
+     *
+     * This is the customer-facing counterpart to the admin-only `POST /`
+     * below. Until it existed, the storefront had no endpoint capable of
+     * creating an order at all, which is why checkout ended in a setTimeout.
+     */
+    @Post('checkout')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.CREATED)
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
+    async checkout(
+        @Req() req: AuthenticatedRequest,
+        @Body(new ValidationPipe({ transform: true, whitelist: true })) dto: CheckoutDto,
+    ): Promise<Order> {
+        return this.checkoutService.checkout(req.user.sub, dto);
+    }
+
+    /** Orders belonging to the signed-in customer. */
+    @Get('mine')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async findMine(@Req() req: AuthenticatedRequest): Promise<Order[]> {
+        return this.ordersService.findByUser(req.user.sub);
+    }
 
     /**
      * Get all orders

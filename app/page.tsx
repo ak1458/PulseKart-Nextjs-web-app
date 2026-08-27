@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle,
@@ -17,22 +17,70 @@ import {
   Camera,
   ArrowRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Award
 } from '@/lib/icons';
 import { motion } from 'framer-motion';
 import ProductCard from '@/components/ui/ProductCard';
 import UploadModal from '@/components/ui/UploadModal';
 import { useCart } from '@/context/CartContext';
 import { getProductImage } from '@/lib/images';
+import { isPrescriptionProduct } from '@/lib/utils';
+import { apiUrl } from '@/lib/api';
 
-// --- Product Data (populated from backend) ---
-const FEATURED_PRODUCTS: any[] = [];
+/**
+ * A product as the homepage renders it.
+ *
+ * The API returns `title` and `images[]`; this page's markup wants `name` and a
+ * single `image`, so the fetch normalises rather than the markup reaching into
+ * two shapes.
+ */
+interface FeaturedProduct {
+    id: number;
+    name: string;
+    category: string;
+    price: number;
+    image: string;
+    prescription_required?: boolean;
+}
 
-// --- Health Goals Data (populated from backend) ---
-const HEALTH_GOALS: any[] = [];
+/**
+ * Health goals and the "why us" panel are marketing copy, not data.
+ *
+ * They were `any[] = []`, so both sections rendered a placeholder reading
+ * "Health goal categories will appear here" to every visitor. Standing up an
+ * API for static copy would be over-engineering; the artwork already ships in
+ * public/images.
+ */
+const HEALTH_GOALS = [
+    { title: 'Immunity', img: '/images/goal-immunity.svg', slug: 'immunity' },
+    { title: 'Heart Health', img: '/images/goal-heart.svg', slug: 'heart' },
+    { title: 'Diabetes Care', img: '/images/goal-diabetes.svg', slug: 'diabetes' },
+    { title: 'Digestion', img: '/images/goal-stomach.svg', slug: 'digestion' },
+];
 
-// --- Why Choose Us Features Data (populated from backend) ---
-const WHY_FEATURES: any[] = [];
+const WHY_FEATURES = [
+    {
+        icon: ShieldCheck,
+        title: 'Verified by pharmacists',
+        desc: 'Every prescription order is checked by a registered pharmacist before it is dispensed.',
+    },
+    {
+        icon: Truck,
+        title: 'Delivered the same day',
+        desc: 'Order before 6 PM in serviceable pincodes and it reaches you the same evening.',
+    },
+    {
+        icon: Award,
+        title: 'Genuine stock only',
+        desc: 'Sourced from licensed distributors, with batch and expiry tracked on every item.',
+    },
+    {
+        icon: MessageCircle,
+        title: 'Support that answers',
+        desc: 'Talk to a person about your order or your prescription, seven days a week.',
+    },
+];
 
 const CATEGORIES = [
   { name: "Medicines", icon: Pill, tone: "text-teal-300" },
@@ -63,6 +111,36 @@ const MOBILE_WHY = [
 ];
 
 export default function Home() {
+  // Featured products come from the catalogue. This was `any[] = []`, so the
+  // homepage showed an empty-state placeholder instead of anything to buy.
+  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(apiUrl('products?limit=8'))
+      .then(res => (res.ok ? res.json() : Promise.reject(new Error('unavailable'))))
+      .then((data: Record<string, unknown>[]) => {
+        if (cancelled || !Array.isArray(data)) return;
+        setFeaturedProducts(
+          data.map(item => ({
+            id: Number(item.id),
+            name: String(item.title ?? item.name ?? 'Unnamed product'),
+            category: String(item.category ?? ''),
+            price: Number(item.price ?? 0),
+            image: Array.isArray(item.images) ? String(item.images[0] ?? '') : '',
+            prescription_required: item.prescription_required === true,
+          })),
+        );
+      })
+      .catch(() => {
+        // The catalogue being unreachable must not blank the whole homepage;
+        // the section falls back to its empty state.
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const { addToCart } = useCart();
 
@@ -143,14 +221,14 @@ export default function Home() {
               View all
             </Link>
           </div>
-          {FEATURED_PRODUCTS.length > 0 ? (
+          {featuredProducts.length > 0 ? (
             <div className="space-y-5">
-              {FEATURED_PRODUCTS.slice(0, 3).map((product) => (
+              {featuredProducts.slice(0, 3).map((product) => (
                 <div key={product.id} className="glass-panel rounded-2xl overflow-hidden border border-white/10">
                   <div className="relative h-44">
                     <img src={getProductImage(product.image)} alt={product.name} className="w-full h-full object-cover" />
                     <button
-                      onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, image: product.image, category: product.category })}
+                      onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, image: product.image, category: product.category, requiresPrescription: isPrescriptionProduct(product) })}
                       className="absolute bottom-3 right-3 px-4 py-2 bg-teal-500 text-white text-xs font-bold rounded-full shadow-[0_10px_20px_rgba(20,184,166,0.4)]"
                     >
                       + Add
@@ -410,9 +488,9 @@ export default function Home() {
               </Link>
             </div>
 
-            {FEATURED_PRODUCTS.length > 0 ? (
+            {featuredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {FEATURED_PRODUCTS.map(product => (
+                {featuredProducts.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>

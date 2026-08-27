@@ -4,45 +4,27 @@
  */
 
 // ============================================================================
-// Shipping and Pricing Configuration
+// Display-only pricing copy
 // ============================================================================
 
-export const SHIPPING_CONFIG = {
-    /** Free shipping threshold in INR */
-    FREE_THRESHOLD_INR: 500,
-    /** Cash on Delivery handling fee in INR */
+/**
+ * Figures quoted in marketing copy ("save 5% with UPI").
+ *
+ * DO NOT price an order with these. The authoritative rules live in
+ * `backend/src/orders/order-pricing.ts`, and what the customer is actually
+ * charged comes from `POST /v1/orders/quote`. These constants previously drove
+ * the real checkout totals, which put the delivery threshold, COD fee and
+ * discount rates under the customer's control and let the two copies disagree.
+ *
+ * Keep these in step with the server values when the server values change.
+ */
+export const PRICING_COPY = {
+    /** Free delivery threshold, INR. */
+    FREE_DELIVERY_THRESHOLD_INR: 500,
+    /** Cash-on-delivery handling fee, INR. */
     COD_FEE_INR: 50,
-    /** Discount percentage for prepaid orders */
-    PREPAID_DISCOUNT_PERCENT: 5,
-    /** Discount percentage for UPI payments */
+    /** Headline discount for paying by UPI, percent. */
     UPI_DISCOUNT_PERCENT: 5,
-    /** Discount percentage for coupon codes */
-    COUPON_DISCOUNT_PERCENT: 10,
-    /** Base delivery charge when free threshold is not met */
-    BASE_DELIVERY_FEE_INR: 40,
-} as const;
-
-// ============================================================================
-// Valid Coupon Codes
-// ============================================================================
-
-export interface CouponConfig {
-    discount: number;
-    type: 'percentage' | 'fixed';
-    description?: string;
-}
-
-export const VALID_COUPONS: Record<string, CouponConfig> = {
-    NEW10: { 
-        discount: 10, 
-        type: 'percentage',
-        description: '10% off for new customers'
-    },
-    NEW15: { 
-        discount: 15, 
-        type: 'percentage',
-        description: '15% off for new customers'
-    },
 } as const;
 
 // ============================================================================
