@@ -1,3 +1,5 @@
+> **Engineered & Maintained by [Arranto](https://arranto.com)** — Custom Software & AI Systems Studio.
+
 # 🛒 PulseKart - Modern E-Commerce Platform
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
